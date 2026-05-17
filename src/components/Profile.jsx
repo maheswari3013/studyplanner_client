@@ -1,0 +1,322 @@
+import { useState, useContext, useEffect } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import axios from 'axios';
+import emailjs from "@emailjs/browser";
+import '../assets/profile.css';
+import { exportToPDF, exportToICS } from '../utils/exportUtils';
+
+const getAuthConfig = () => ({
+  headers: { 'x-auth-token': localStorage.getItem('token') }
+});
+
+export default function Profile() {
+  const { user, logout, updateUser } = useContext(AuthContext);
+  const [stats, setStats] = useState({ total: 0, completed: 0, completionRate: 0 });
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // Email change + OTP states
+  const [newEmail, setNewEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [sentOtp, setSentOtp] = useState('');
+  const [otpExpiry, setOtpExpiry] = useState(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+
+  const handleExport = async (type) => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/schedule/export', {
+        headers: { 'x-auth-token': token }
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch');
+
+      const blocks = await res.json();
+      console.log('Blocks received:', blocks);
+      if (!blocks.length) {
+        alert('No study blocks to export. Create some first.');
+        return;
+      }
+      if (type === 'pdf') {
+        exportToPDF(blocks, user.name);
+      } else {
+        exportToICS(blocks);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) fetchStats();
+  }, [user]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/schedule/stats', getAuthConfig());
+      setStats(res.data);
+    } catch (err) {
+      console.error('Failed to fetch stats:', err);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+
+    if (passwordData.newPassword!== passwordData.confirmPassword) {
+      alert('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axios.post('http://localhost:5000/api/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      }, getAuthConfig());
+
+      alert('Password changed successfully');
+      setShowPasswordForm(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      alert(err.response?.data?.msg || 'Failed to change password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendOtpToNewEmail = async () => {
+    if (!newEmail || newEmail === user.email) {
+      alert('Enter a new email address');
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000);
+      const expiry = Date.now() + 15 * 60 * 1000;
+      setSentOtp(String(generatedOtp));
+      setOtpExpiry(expiry);
+
+      const time = new Date(expiry);
+      const expiryTime = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
+
+      await emailjs.send(
+        "service_9l1dihp",
+        "template_7bth6c8",
+        { email: newEmail, otp: generatedOtp, time: expiryTime },
+        { publicKey: "N3xga7GAtw352Ac-q" }
+      );
+
+      alert('OTP sent to new email. Valid for 15 minutes.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send OTP');
+    }
+    setOtpLoading(false);
+  };
+
+  const handleEmailChange = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (!sentOtp || otp!== sentOtp) {
+      alert('Invalid OTP');
+      setLoading(false);
+      return;
+    }
+
+    if (Date.now() > otpExpiry) {
+      alert('OTP expired. Generate a new one.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await axios.patch(
+        'http://localhost:5000/api/auth/profile',
+        { name: user.name, email: newEmail },
+        getAuthConfig()
+      );
+
+      updateUser(res.data);
+      alert('Email updated successfully');
+      setShowEmailForm(false);
+      setNewEmail('');
+      setOtp('');
+      setSentOtp('');
+    } catch (err) {
+      alert(err.response?.data?.msg || 'Update failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user) return <div className="profile-loading">Loading...</div>;
+
+  return (
+    <div className="profile-container">
+      <h2>Profile</h2>
+
+      <div className="profile-card">
+        <div className="profile-header">
+          <div className="profile-avatar">{user.name?.[0]?.toUpperCase() || 'U'}</div>
+          <div>
+            <h3>{user.name}</h3>
+            <p className="profile-email">{user.email}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-card">
+        <h3>Your Stats</h3>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <span className="stat-value">{stats.total}</span>
+            <span className="stat-label">Total Blocks</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{stats.completed}</span>
+            <span className="stat-label">Completed</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{stats.completionRate}%</span>
+            <span className="stat-label">Completion</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="password-card">
+        <h3>Security</h3>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <button onClick={() => { setShowPasswordForm(!showPasswordForm); setShowEmailForm(false); }} className="btn-secondary">
+            {showPasswordForm? 'Cancel' : 'Change Password'}
+          </button>
+          <button onClick={() => { setShowEmailForm(!showEmailForm); setShowPasswordForm(false); }} className="btn-secondary">
+            {showEmailForm? 'Cancel' : 'Change Email'}
+          </button>
+        </div>
+
+        {showPasswordForm && (
+          <form onSubmit={handlePasswordChange} className="password-form">
+            <label>
+              Current Password
+              <input
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={e => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                required
+              />
+            </label>
+            <label>
+              New Password
+              <input
+                type="password"
+                value={passwordData.newPassword}
+                onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})}
+                placeholder="Min 6 characters"
+                required
+              />
+            </label>
+            <label>
+              Confirm New Password
+              <input
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                required
+              />
+            </label>
+            <div className="profile-actions">
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {showEmailForm && (
+          <form onSubmit={handleEmailChange} className="password-form">
+            <label>
+              New Email Address
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  placeholder="Enter new email"
+                  required
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={sendOtpToNewEmail}
+                  disabled={otpLoading ||!newEmail}
+                  className="btn-secondary"
+                >
+                  {otpLoading? 'Sending...' : 'Send OTP'}
+                </button>
+              </div>
+            </label>
+            <label>
+              Enter OTP
+              <input
+                type="text"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                placeholder="6-digit OTP"
+                required
+              />
+            </label>
+            <div className="profile-actions">
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading? 'Updating...' : 'Update Email'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      <div className="export-card">
+        <h3>Export Schedule</h3>
+        <div className="profile-actions">
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={exporting}
+            className="btn-secondary"
+          >
+            {exporting? 'Exporting...' : 'Download PDF'}
+          </button>
+          <button
+            onClick={() => handleExport('ics')}
+            disabled={exporting}
+            className="btn-secondary"
+          >
+            {exporting? 'Exporting...' : 'Add to Calendar'}
+          </button>
+        </div>
+      </div>
+
+      <button onClick={logout} className="btn-logout">
+        Logout
+      </button>
+    </div>
+  );
+}
