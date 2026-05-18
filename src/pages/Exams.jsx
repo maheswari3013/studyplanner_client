@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import API from '../api/axios'; 
 import '../assets/exams.css';
-
-const getAuthConfig = () => ({
-  headers: { 'x-auth-token': localStorage.getItem('token') }
-});
 
 export default function Exams() {
   const [exams, setExams] = useState([]);
@@ -14,7 +10,7 @@ export default function Exams() {
 
   const fetchExams = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/schedule/exams', getAuthConfig());
+      const res = await API.get('/schedule/exams');
       setExams(res.data);
     } catch (err) {
       console.error(err);
@@ -30,7 +26,7 @@ export default function Exams() {
   const handleDelete = async (id, subject) => {
     if (!window.confirm(`Delete ${subject} and all its study blocks?`)) return;
     try {
-      await axios.delete(`http://localhost:5000/api/schedule/exams/${id}`, getAuthConfig());
+      await API.delete(`/schedule/exams/${id}`);
       fetchExams();
     } catch (err) {
       alert('Failed to delete exam');

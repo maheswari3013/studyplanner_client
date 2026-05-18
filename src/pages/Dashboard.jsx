@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import API from '../api/axios'; 
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -25,20 +25,16 @@ export default function Dashboard() {
   const { user, token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const getAuthConfig = () => ({
-    headers: { 'x-auth-token': token }
-  });
-
-const fetchData = async () => {
-  setLoading(true);
-  try {
-    const [examsRes, statsRes, blocksRes, progressRes, readinessRes, affirmationRes] = await Promise.all([
-      axios.get('http://localhost:5000/api/schedule/exams', getAuthConfig()),
-      axios.get('http://localhost:5000/api/schedule/stats', getAuthConfig()),
-      axios.get('http://localhost:5000/api/schedule', getAuthConfig()),
-      axios.get('http://localhost:5000/api/schedule/progress', getAuthConfig()),
-      axios.get('http://localhost:5000/api/schedule/readiness', getAuthConfig()),
-      axios.get('http://localhost:5000/api/schedule/affirmation', getAuthConfig())
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [examsRes, statsRes, blocksRes, progressRes, readinessRes, affirmationRes] = await Promise.all([
+        API.get('/schedule/exams'),
+        API.get('/schedule/stats'),
+        API.get('/schedule'),
+        API.get('/schedule/progress'),
+        API.get('/schedule/readiness'),
+        API.get('/schedule/affirmation')
       ]);
       setExams(examsRes.data);
       setStats(statsRes.data);
@@ -73,7 +69,7 @@ const fetchData = async () => {
       };
 
       const body = { exams, config };
-      const res = await axios.post('http://localhost:5000/api/schedule/generate', body, getAuthConfig());
+      const res = await API.post('/schedule/generate', body);
 
       if (!res.data.success) {
         const conflicts = res.data.conflicts || [];
@@ -106,7 +102,7 @@ const fetchData = async () => {
   const handleDeleteExam = async (examId, subject) => {
     if (!window.confirm(`Delete ${subject} exam? This will also delete all its study blocks.`)) return;
     try {
-      await axios.delete(`http://localhost:5000/api/schedule/exams/${examId}`, getAuthConfig());
+      await API.delete(`/schedule/exams/${examId}`);
       await fetchData();
       toast.success('Exam deleted');
     } catch (err) {
@@ -116,10 +112,7 @@ const fetchData = async () => {
 
   const updateConfidence = async (subject, level) => {
     try {
-      await axios.patch('http://localhost:5000/api/schedule/user/confidence',
-        { subject, level },
-        getAuthConfig()
-      );
+      await API.patch('/schedule/user/confidence', { subject, level });
       toast.success('Confidence updated');
       fetchData();
     } catch {
@@ -130,10 +123,10 @@ const fetchData = async () => {
   const logTime = async () => {
     if (!loggingBlock ||!actualMinutes) return toast.error('Enter minutes');
     try {
-      await axios.post('http://localhost:5000/api/schedule/log',
-        { blockId: loggingBlock._id, actualMinutes: parseInt(actualMinutes) },
-        getAuthConfig()
-      );
+      await API.post('/schedule/log', {
+        blockId: loggingBlock._id,
+        actualMinutes: parseInt(actualMinutes)
+      });
       toast.success('Time logged');
       setLoggingBlock(null);
       setActualMinutes('');
@@ -172,9 +165,9 @@ const fetchData = async () => {
     });
 
     return Object.values(dailyMap)
-    .sort((a, b) => new Date(a.date) - new Date(b.date))
-    .slice(-7)
-    .map(d => ({...d, hours: Number(d.hours.toFixed(1)) }));
+     .sort((a, b) => new Date(a.date) - new Date(b.date))
+     .slice(-7)
+     .map(d => ({...d, hours: Number(d.hours.toFixed(1)) }));
   };
 
   const getRingColor = (pct) => pct >= 80? '#10b981' : pct >= 50? '#f59e0b' : '#ef4444';
@@ -227,7 +220,7 @@ const fetchData = async () => {
                     <div className="dash-exam-meta">
                       <BookOpen size={14} />
                       {Array.isArray(exam.syllabusTopics)
-                      ? exam.syllabusTopics.map(t => typeof t === 'string'? t : t.name).join(', ')
+                       ? exam.syllabusTopics.map(t => typeof t === 'string'? t : t.name).join(', ')
                         : ''}
                     </div>
                     {exam.totalScheduledHours && (

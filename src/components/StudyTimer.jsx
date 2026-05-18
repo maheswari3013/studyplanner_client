@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, CheckCircle } from 'lucide-react';
+import { Play, Pause, RotateCcw, CheckCircle, X } from 'lucide-react';
 import '../assets/StudyTimer.css';
 
-export default function StudyTimer({ block, onComplete, onNeedMoreTime }) {
+export default function StudyTimer({ block, onComplete, onNeedMoreTime, onClose }) {
   const [secondsLeft, setSecondsLeft] = useState(block.duration * 60);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -36,6 +36,12 @@ export default function StudyTimer({ block, onComplete, onNeedMoreTime }) {
 
   return (
     <div className="timer-container">
+      {onClose && (
+        <button onClick={onClose} className="timer-close-btn" title="Close timer">
+          <X size={20} />
+        </button>
+      )}
+
       <div className="timer-header">
         <p className={`timer-label ${isBreak ? 'break' : ''}`}>
           {isBreak ? 'Break Time' : block.subject}

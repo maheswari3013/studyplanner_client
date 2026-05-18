@@ -1,15 +1,11 @@
 import { useState } from 'react';
-import axios from 'axios';
+import API from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/plansetup.css';
-
-const getAuthConfig = () => ({
-  headers: { 'x-auth-token': localStorage.getItem('token') }
-});
 
 const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
@@ -401,7 +397,7 @@ export default function PlanSetup() {
     const payload = { exams: payloadExams, config };
 
     try {
-      const res = await axios.post('http://localhost:5000/api/schedule/generate', payload, getAuthConfig());
+      const res = await API.post('/schedule/generate', payload);
 
       if (!res.data.success) {
         res.data.conflicts?.forEach(c => {

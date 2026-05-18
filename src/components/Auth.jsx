@@ -29,8 +29,8 @@ function Auth() {
     setError('');
     
     try {
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000); // 6 digits
-      const expiry = Date.now() + 15 * 60 * 1000; // 15 min
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000);
+      const expiry = Date.now() + 15 * 60 * 1000;
       setSentOtp(String(generatedOtp));
       setOtpExpiry(expiry);
 
@@ -38,20 +38,20 @@ function Auth() {
       const expiryTime = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
 
       await emailjs.send(
-        "service_ypru2oc",
-        "template_eg2yipo",
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
         {
           email: email,
           otp: generatedOtp,
           time: expiryTime,
         },
-        { publicKey: "uMfM8zInlsgvCCN3V" }
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       );
 
       alert('OTP sent to your email. Valid for 15 minutes.');
     } catch (err) {
-      console.error(err);
-      setError('Failed to send OTP');
+      console.error('EmailJS Error:', err);
+      setError('Failed to send OTP. Check console for details.');
     }
     setOtpLoading(false);
   };
@@ -67,7 +67,6 @@ function Auth() {
       return;
     }
 
-    // Verify OTP before calling backend
     if (!sentOtp || otp !== sentOtp) {
       setError('Invalid OTP');
       setSubmitLoading(false);
@@ -82,7 +81,6 @@ function Auth() {
 
     try {
       if (isLogin) {
-        console.log('Sending login:', email);
         await login(email, password);
       } else {
         await register(name, email, password);

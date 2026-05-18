@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import API from '../api/axios';
 import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, Clock, Calendar as CalendarIcon, BookOpen, Zap, Coffee } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/CalendarView.css';
-
-const getAuthConfig = () => ({
-  headers: { 'x-auth-token': localStorage.getItem('token') }
-});
 
 export default function CalendarView() {
   const [blocks, setBlocks] = useState([]);
@@ -39,7 +35,7 @@ export default function CalendarView() {
 
   const fetchBlocks = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/schedule', getAuthConfig());
+      const res = await API.get('/schedule');
       setBlocks(res.data);
     } catch (err) {
       console.error('Failed to fetch blocks:', err);
@@ -49,18 +45,14 @@ export default function CalendarView() {
 
   const checkGoogleConnection = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/auth/user', getAuthConfig());
+      const res = await API.get('/auth/user');
       setGoogleConnected(!!res.data.googleTokens?.refresh_token);
     } catch {}
   };
 
   const handleMarkMissed = async (blockId) => {
     try {
-      const res = await axios.patch(
-        `http://localhost:5000/api/schedule/${blockId}/missed`,
-        {},
-        getAuthConfig()
-      );
+      const res = await API.patch(`/schedule/${blockId}/missed`);
       if (res.data.success) {
         toast.success(`Rescheduled! Created ${res.data.newBlocksCreated} new blocks`);
         fetchBlocks();
@@ -74,10 +66,10 @@ export default function CalendarView() {
   const logTime = async () => {
     if (!loggingBlock ||!actualMinutes) return toast.error('Enter minutes');
     try {
-      await axios.post('http://localhost:5000/api/schedule/log',
-        { blockId: loggingBlock._id, actualMinutes: parseInt(actualMinutes) },
-        getAuthConfig()
-      );
+      await API.post('/schedule/log', {
+        blockId: loggingBlock._id,
+        actualMinutes: parseInt(actualMinutes)
+      });
       toast.success('Time logged');
       setLoggingBlock(null);
       setActualMinutes('');
@@ -90,8 +82,10 @@ export default function CalendarView() {
 
   const downloadWeeklyPDF = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/schedule/export/pdf', {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
+      const token = localStorage.getItem('token');
+      const baseURL = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${baseURL}/schedule/export/pdf`, {
+        headers: { 'x-auth-token': token }
       });
 
       if (!res.ok) {
@@ -169,12 +163,12 @@ export default function CalendarView() {
   const syncGoogle = async () => {
     setSyncing(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/schedule/google/sync', {}, getAuthConfig());
+      const res = await API.post('/schedule/google/sync');
       toast.success(res.data.msg);
       setGoogleConnected(true);
     } catch (err) {
       if (err.response?.data?.needsAuth) {
-        const authRes = await axios.get('http://localhost:5000/api/schedule/google/auth', getAuthConfig());
+        const authRes = await API.get('/schedule/google/auth');
         const popup = window.open(authRes.data.url, '_blank', 'width=500,height=600');
 
         const checkPopup = setInterval(() => {
@@ -288,7 +282,7 @@ export default function CalendarView() {
   const getBlocksForDay = (date) => {
     const dateStr = date.toISOString().split('T')[0];
     return blocks.filter(b => b.date.split('T')[0] === dateStr)
-     .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
   };
 
   const changeDate = (delta) => {

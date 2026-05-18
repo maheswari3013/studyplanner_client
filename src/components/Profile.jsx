@@ -1,13 +1,9 @@
 import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import axios from 'axios';
+import API from '../api/axios';
 import emailjs from "@emailjs/browser";
 import '../assets/profile.css';
 import { exportToPDF, exportToICS } from '../utils/exportUtils';
-
-const getAuthConfig = () => ({
-  headers: { 'x-auth-token': localStorage.getItem('token') }
-});
 
 export default function Profile() {
   const { user, logout, updateUser } = useContext(AuthContext);
@@ -33,15 +29,10 @@ export default function Profile() {
   const handleExport = async (type) => {
     setExporting(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/schedule/export', {
-        headers: { 'x-auth-token': token }
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch');
-
-      const blocks = await res.json();
+      const res = await API.get('/schedule/export');
+      const blocks = res.data;
       console.log('Blocks received:', blocks);
+
       if (!blocks.length) {
         alert('No study blocks to export. Create some first.');
         return;
@@ -65,7 +56,7 @@ export default function Profile() {
 
   const fetchStats = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/schedule/stats', getAuthConfig());
+      const res = await API.get('/schedule/stats');
       setStats(res.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
@@ -87,10 +78,10 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/auth/change-password', {
+      await API.post('/auth/change-password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
-      }, getAuthConfig());
+      });
 
       alert('Password changed successfully');
       setShowPasswordForm(false);
@@ -119,10 +110,10 @@ export default function Profile() {
       const expiryTime = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
 
       await emailjs.send(
-        "service_9l1dihp",
-        "template_7bth6c8",
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
         { email: newEmail, otp: generatedOtp, time: expiryTime },
-        { publicKey: "N3xga7GAtw352Ac-q" }
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       );
 
       alert('OTP sent to new email. Valid for 15 minutes.');
@@ -150,11 +141,10 @@ export default function Profile() {
     }
 
     try {
-      const res = await axios.patch(
-        'http://localhost:5000/api/auth/profile',
-        { name: user.name, email: newEmail },
-        getAuthConfig()
-      );
+      const res = await API.patch('/auth/profile', {
+        name: user.name,
+        email: newEmail
+      });
 
       updateUser(res.data);
       alert('Email updated successfully');

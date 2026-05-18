@@ -74,6 +74,7 @@ export default function FocusMode({ block, onClose, onComplete, onNeedMoreTime }
               handleClose();
             }}
             onNeedMoreTime={onNeedMoreTime}
+            onClose={handleClose}
           />
         </div>
 

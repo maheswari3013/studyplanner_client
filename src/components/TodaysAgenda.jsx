@@ -1,13 +1,9 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import API from '../api/axios'; 
 import StudyTimer from './StudyTimer';
 import FocusMode from '../pages/FocusMode';
 import { Maximize2 } from 'lucide-react';
 import '../assets/TodaysAgenda.css';
-
-const getAuthConfig = () => ({
-  headers: { 'x-auth-token': localStorage.getItem('token') }
-});
 
 export default function TodaysAgenda() {
   const [blocks, setBlocks] = useState([]);
@@ -23,7 +19,7 @@ export default function TodaysAgenda() {
   const fetchToday = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/schedule/today', getAuthConfig());
+      const res = await API.get('/schedule/today');
       setBlocks(res.data);
     } catch (err) {
       console.error('Failed to fetch today:', err);
@@ -38,29 +34,29 @@ export default function TodaysAgenda() {
   }, []);
 
   const markComplete = async (id) => {
-    await axios.patch(`http://localhost:5000/api/schedule/${id}/complete`, {}, getAuthConfig());
+    await API.patch(`/schedule/${id}/complete`);
     setActiveTimerBlock(null);
     setFocusModeBlock(null);
     fetchToday();
   };
 
   const markMissed = async (id) => {
-    await axios.patch(`http://localhost:5000/api/schedule/${id}/missed`, {}, getAuthConfig());
+    await API.patch(`/schedule/${id}/missed`);
     setActiveTimerBlock(null);
     setFocusModeBlock(null);
     fetchToday();
   };
 
   const handleNeedMoreTime = async (id) => {
-    await axios.patch(`http://localhost:5000/api/schedule/${id}`, {
+    await API.patch(`/schedule/${id}`, {
       $inc: { duration: 15 }
-    }, getAuthConfig());
+    });
     fetchToday();
   };
 
   const deleteBlock = async (id) => {
     if (!confirm('Delete this study block?')) return;
-    await axios.delete(`http://localhost:5000/api/schedule/${id}`, getAuthConfig());
+    await API.delete(`/schedule/${id}`);
     fetchToday();
   };
 
@@ -76,11 +72,7 @@ export default function TodaysAgenda() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    await axios.patch(
-      `http://localhost:5000/api/schedule/${editingBlock._id}`,
-      editForm,
-      getAuthConfig()
-    );
+    await API.patch(`/schedule/${editingBlock._id}`, editForm);
     setEditingBlock(null);
     fetchToday();
   };
@@ -89,7 +81,7 @@ export default function TodaysAgenda() {
     setGenerating(true);
     try {
       const body = startDate? { startDate } : {};
-      const res = await axios.post('http://localhost:5000/api/schedule/generate', body, getAuthConfig());
+      const res = await API.post('/schedule/generate', body);
       alert(`Generated ${res.data.count} study blocks starting ${startDate || 'tomorrow'}`);
       setShowDateModal(false);
       setStartDate('');
