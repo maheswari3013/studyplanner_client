@@ -17,7 +17,7 @@ function Auth() {
   const [submitLoading, setSubmitLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { login, register } = useContext(AuthContext);
+  const { setAuthData } = useContext(AuthContext); // Changed: use setAuthData
 
   const generateOtp = async () => {
     if (!email) {
@@ -50,15 +50,17 @@ function Auth() {
     }
 
     try {
-      // Backend will verify OTP + handle login/register
-      if (isLogin) {
-        await axios.post(`${API_URL}/auth/login`, { email, password, otp });
-        await login(email, password); // This sets context state/token
-      } else {
-        await axios.post(`${API_URL}/auth/register`, { name, email, password, otp });
-        await register(name, email, password); // This sets context state/token
-      }
+      const endpoint = isLogin ? '/auth/login' : '/auth/register';
+      const payload = isLogin 
+        ? { email, password, otp }
+        : { name, email, password, otp };
+
+      const res = await axios.post(`${API_URL}${endpoint}`, payload);
+      
+      // Use response directly - don't call login/register again
+      setAuthData(res.data.token, res.data.user); 
       navigate('/agenda');
+      
     } catch (err) {
       setError(err.response?.data?.msg || 'Error occurred');
     }

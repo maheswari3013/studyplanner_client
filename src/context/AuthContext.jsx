@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Set axios default header when token changes
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['x-auth-token'] = token;
@@ -21,7 +20,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Load user on mount if token exists
   useEffect(() => {
     const loadUser = async () => {
       if (token) {
@@ -39,18 +37,10 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, [token]);
 
-  // Login: just sets token + user state. Auth.jsx handles the API call
-  const login = async (email, password) => {
-    const res = await axios.post(`${API_URL}/auth/login`, { email, password, otp: '' }); // OTP already verified in Auth.jsx
-    setToken(res.data.token);
-    setUser(res.data.user);
-  };
-
-  // Register: just sets token + user state. Auth.jsx handles the API call
-  const register = async (name, email, password) => {
-    const res = await axios.post(`${API_URL}/auth/register`, { name, email, password, otp: '' }); // OTP already verified in Auth.jsx
-    setToken(res.data.token);
-    setUser(res.data.user);
+  // NEW: Just store token + user. No API call here.
+  const setAuthData = (newToken, newUser) => {
+    setToken(newToken);
+    setUser(newUser);
   };
 
   const logout = () => {
@@ -59,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, setAuthData, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
