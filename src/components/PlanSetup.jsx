@@ -6,6 +6,8 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/plansetup.css';
+import { examApi } from '../api/examApi';
+import { scheduleApi } from '../api/scheduleApi';
 
 const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
@@ -144,13 +146,12 @@ function SortableExam({ exam, idx, updateExam, updateTopic, addTopic, removeTopi
           <div className="hours-wrapper">
             <label>Total Hours for {exam.subject || 'this subject'}:
               <input
-                className="form-input"
+                className="form-input input-mt-4"
                 type="number"
                 min="1"
                 value={exam.totalHours || ''}
                 onChange={e => updateExam(idx, 'totalHours', Number(e.target.value))}
                 placeholder="e.g. 40"
-                style={{ marginTop: '4px' }}
               />
             </label>
           </div>
@@ -304,7 +305,7 @@ export default function PlanSetup() {
   const addTopic = (examIdx) => {
     const newExams = [...exams];
     const newTopic = exams[examIdx].hourMode === 'topic'
-   ? { name: '', hours: 10 }
+  ? { name: '', hours: 10 }
       : '';
     newExams[examIdx].syllabusTopics.push(newTopic);
     setExams(newExams);
@@ -388,7 +389,7 @@ export default function PlanSetup() {
       priority: idx + 1,
       totalHours: exam.hourMode === 'subject'? exam.totalHours : undefined,
       syllabusTopics: exam.hourMode === 'topic'
-     ? exam.syllabusTopics.filter(t => t.name?.trim())
+    ? exam.syllabusTopics.filter(t => t.name?.trim())
         : exam.syllabusTopics.filter(t => typeof t === 'string' && t.trim()),
       availableHours: exam.availableHours,
       breakRatio: exam.breakRatio

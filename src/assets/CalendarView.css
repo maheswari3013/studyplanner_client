@@ -12,6 +12,44 @@
   flex-wrap: wrap;
   gap: 20px;
 }
+.block-detail-content {
+  flex: 1;
+}
+
+/* PDF Export Temp Styles */
+.pdf-export-temp {
+  padding: 40px;
+  background: white;
+  width: 800px;
+}
+
+.pdf-title {
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+.pdf-date-range {
+  color: #6b7280;
+  margin-bottom: 30px;
+}
+
+.pdf-block {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.pdf-block-title {
+  margin: 0 0 4px;
+  color: #1f2937;
+}
+
+.pdf-block-meta {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
 
 .header-left {
   display: flex;

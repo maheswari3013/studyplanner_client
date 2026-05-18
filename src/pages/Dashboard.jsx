@@ -165,12 +165,13 @@ export default function Dashboard() {
     });
 
     return Object.values(dailyMap)
-     .sort((a, b) => new Date(a.date) - new Date(b.date))
-     .slice(-7)
-     .map(d => ({...d, hours: Number(d.hours.toFixed(1)) }));
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(-7)
+    .map(d => ({...d, hours: Number(d.hours.toFixed(1)) }));
   };
 
-  const getRingColor = (pct) => pct >= 80? '#10b981' : pct >= 50? '#f59e0b' : '#ef4444';
+  const getRingColorClass = (pct) => pct >= 80? 'ring-high' : pct >= 50? 'ring-mid' : 'ring-low';
+  const getScoreClass = (readiness) => readiness >= 70? 'high' : readiness >= 40? 'mid' : 'low';
 
   if (loading) return (
     <div className="dash-container">
@@ -220,7 +221,7 @@ export default function Dashboard() {
                     <div className="dash-exam-meta">
                       <BookOpen size={14} />
                       {Array.isArray(exam.syllabusTopics)
-                       ? exam.syllabusTopics.map(t => typeof t === 'string'? t : t.name).join(', ')
+                      ? exam.syllabusTopics.map(t => typeof t === 'string'? t : t.name).join(', ')
                         : ''}
                     </div>
                     {exam.totalScheduledHours && (
@@ -228,7 +229,7 @@ export default function Dashboard() {
                         <div className="dash-progress-bar-mini">
                           <div
                             className="dash-progress-fill-mini"
-                            style={{ width: `${(exam.completedHours / exam.totalScheduledHours) * 100}%` }}
+                            data-progress={Math.round((exam.completedHours / exam.totalScheduledHours) * 100)}
                           ></div>
                         </div>
                         <span>{exam.completedHours || 0}h / {exam.totalScheduledHours}h</span>
@@ -308,9 +309,7 @@ export default function Dashboard() {
               <div className="dash-rings-grid">
                 {progressData.map(p => (
                   <div key={p.subject} className="dash-ring-item">
-                    <div className="dash-ring" style={{
-                      background: `conic-gradient(${getRingColor(p.percentComplete)} ${p.percentComplete * 3.6}deg, #e5e7eb 0deg)`
-                    }}>
+                    <div className={`dash-ring ${getRingColorClass(p.percentComplete)}`} data-percent={p.percentComplete}>
                       <div className="dash-ring-inner">
                         <span className="dash-percent">{p.percentComplete}%</span>
                       </div>
@@ -334,12 +333,12 @@ export default function Dashboard() {
                 <div key={r.subject} className="dash-readiness-card">
                   <div className="dash-readiness-header">
                     <span className="dash-readiness-subject">{r.subject}</span>
-                    <span className={`dash-score ${r.readiness >= 70? 'high' : r.readiness >= 40? 'mid' : 'low'}`}>
+                    <span className={`dash-score ${getScoreClass(r.readiness)}`}>
                       {r.readiness}%
                     </span>
                   </div>
                   <div className="dash-readiness-bar">
-                    <div className="dash-bar-fill" style={{ width: `${r.readiness}%` }}></div>
+                    <div className="dash-bar-fill" data-progress={r.readiness}></div>
                   </div>
                   <div className="dash-confidence-slider">
                     <label>Confidence: {r.confidence}/10</label>

@@ -172,8 +172,3 @@
   .nav-links { gap: 2px; }
   .logo-text { display: none; }
 }
-.nav-icons a.active {
-  background: #e0e7ff;
-  color: #4338ca;
-  border-radius: 8px;
-}

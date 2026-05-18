@@ -705,3 +705,14 @@
     font-size: 28px;
   }
 }
+.dash-progress-fill-mini {
+  width: var(--progress-width, 0%);
+}
+
+.dash-ring {
+  background: conic-gradient(var(--ring-color) calc(var(--percent, 0) * 3.6deg), #e5e7eb 0deg);
+}
+
+.dash-bar-fill {
+  width: var(--progress-width, 0%);
+}

@@ -1,0 +1,200 @@
+:root {
+  /* === Primary Brand === */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #667eea;
+  --color-primary-600: #5a67d8;
+  --color-primary-700: #4c51bf;
+  --color-primary-800: #434190;
+  --color-primary-900: #3c366b;
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  /* === Success === */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+  --gradient-success: linear-gradient(135deg, #10b981, #059669);
+
+  /* === Warning === */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+  --gradient-warning: linear-gradient(135deg, #f59e0b, #d97706);
+
+  /* === Danger === */
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+  --gradient-danger: linear-gradient(135deg, #ef4444, #dc2626);
+
+  /* === Info === */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+  --gradient-info: linear-gradient(135deg, #3b82f6, #2563eb);
+
+  /* === Neutral / Gray === */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* === Semantic Aliases === */
+  --color-bg: var(--color-neutral-0);
+  --color-bg-secondary: var(--color-neutral-50);
+  --color-bg-tertiary: var(--color-neutral-100);
+  --color-text: var(--color-neutral-800);
+  --color-text-secondary: var(--color-neutral-600);
+  --color-text-tertiary: var(--color-neutral-500);
+  --color-border: var(--color-neutral-200);
+  --color-border-hover: var(--color-neutral-300);
+
+  /* === Study Block Types === */
+  --block-study-bg: var(--color-info-50);
+  --block-study-color: var(--color-info-600);
+  --block-study-border: var(--color-info-500);
+
+  --block-review-bg: var(--color-warning-50);
+  --block-review-color: var(--color-warning-700);
+  --block-review-border: var(--color-warning-500);
+
+  --block-practice-bg: var(--color-primary-50);
+  --block-practice-color: var(--color-primary-600);
+  --block-practice-border: var(--color-primary-500);
+
+  --block-break-bg: var(--color-neutral-100);
+  --block-break-color: var(--color-neutral-600);
+  --block-break-border: var(--color-neutral-400);
+
+  --block-done-bg: var(--color-success-50);
+  --block-done-color: var(--color-success-700);
+  --block-done-border: var(--color-success-500);
+
+  --block-missed-bg: var(--color-danger-50);
+  --block-missed-color: var(--color-danger-700);
+  --block-missed-border: var(--color-danger-500);
+
+  /* === Difficulty Levels === */
+  --difficulty-1-bg: var(--color-success-100);
+  --difficulty-1-color: var(--color-success-700);
+  --difficulty-2-bg: var(--color-success-50);
+  --difficulty-2-color: var(--color-success-600);
+  --difficulty-3-bg: var(--color-warning-100);
+  --difficulty-3-color: var(--color-warning-700);
+  --difficulty-4-bg: var(--color-warning-50);
+  --difficulty-4-color: var(--color-warning-600);
+  --difficulty-5-bg: var(--color-danger-100);
+  --difficulty-5-color: var(--color-danger-700);
+
+  /* === Spacing === */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* === Border Radius === */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* === Shadows === */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.12);
+
+  /* === Transitions === */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* === Typography === */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 20px;
+  --text-3xl: 24px;
+  --text-4xl: 32px;
+
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+
+  /* === Z-Index === */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+}
+
+/* === Dark Mode Support - Optional === */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: var(--color-neutral-900);
+    --color-bg-secondary: var(--color-neutral-800);
+    --color-bg-tertiary: var(--color-neutral-700);
+    --color-text: var(--color-neutral-100);
+    --color-text-secondary: var(--color-neutral-300);
+    --color-text-tertiary: var(--color-neutral-400);
+    --color-border: var(--color-neutral-700);
+    --color-border-hover: var(--color-neutral-600);
+  }
+}

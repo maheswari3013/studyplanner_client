@@ -5,6 +5,20 @@ import emailjs from "@emailjs/browser";
 import '../assets/profile.css';
 import { exportToPDF, exportToICS } from '../utils/exportUtils';
 
+// Same password validation as Auth.jsx
+const validatePassword = (password) => {
+  const minLength = password.length >= 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  if (!minLength) return 'Password must be at least 8 characters';
+  if (!hasUpper) return 'Password must contain 1 uppercase letter';
+  if (!hasNumber) return 'Password must contain 1 number';
+  if (!hasSpecial) return 'Password must contain 1 special character';
+  return '';
+};
+
 export default function Profile() {
   const { user, logout, updateUser } = useContext(AuthContext);
   const [stats, setStats] = useState({ total: 0, completed: 0, completionRate: 0 });
@@ -71,8 +85,9 @@ export default function Profile() {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      alert('Password must be at least 6 characters');
+    const passwordError = validatePassword(passwordData.newPassword);
+    if (passwordError) {
+      alert(passwordError);
       return;
     }
 
@@ -195,7 +210,7 @@ export default function Profile() {
 
       <div className="password-card">
         <h3>Security</h3>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <div className="security-btn-group">
           <button onClick={() => { setShowPasswordForm(!showPasswordForm); setShowEmailForm(false); }} className="btn-secondary">
             {showPasswordForm? 'Cancel' : 'Change Password'}
           </button>
@@ -221,7 +236,7 @@ export default function Profile() {
                 type="password"
                 value={passwordData.newPassword}
                 onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})}
-                placeholder="Min 6 characters"
+                placeholder="8+ chars, 1 upper, 1 number, 1 special"
                 required
               />
             </label>
@@ -246,14 +261,14 @@ export default function Profile() {
           <form onSubmit={handleEmailChange} className="password-form">
             <label>
               New Email Address
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="email-otp-row">
                 <input
                   type="email"
                   value={newEmail}
                   onChange={e => setNewEmail(e.target.value)}
                   placeholder="Enter new email"
                   required
-                  style={{ flex: 1 }}
+                  className="email-input-flex"
                 />
                 <button
                   type="button"

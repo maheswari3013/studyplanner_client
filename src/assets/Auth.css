@@ -1,0 +1,85 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--gradient-primary);
+}
+
+.auth-container h2 {
+  color: var(--color-neutral-0);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  margin-bottom: var(--space-6);
+}
+
+.auth-form {
+  background: var(--color-bg);
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-form input {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  transition: border-color var(--transition-base);
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.auth-form button[type="submit"] {
+  padding: var(--space-3);
+  background: var(--gradient-primary);
+  color: var(--color-neutral-0);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  transition: transform var(--transition-base);
+}
+
+.auth-form button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-hover);
+}
+
+.auth-form button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggle-auth {
+  margin-top: var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--color-neutral-0);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+}
+
+.error-msg {
+  background: var(--color-danger-50);
+  color: var(--color-danger-700);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-danger-200);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}

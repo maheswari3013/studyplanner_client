@@ -69,7 +69,7 @@ export default function Exams() {
       {exams.length === 0? (
         <div className="empty-state">
           <p>No exams yet. Create your first study plan.</p>
-          <button onClick={() => navigate('/setup')} className="btn-primary" style={{ marginTop: '12px' }}>
+          <button onClick={() => navigate('/setup')} className="btn-primary btn-mt-12">
             Go to Setup
           </button>
         </div>
@@ -77,7 +77,7 @@ export default function Exams() {
         exams.map(exam => (
           <div key={exam._id} className={`exam-card ${exam.daysLeft < 0? 'past-due' : ''}`}>
             <div className="exam-card-header">
-              <div style={{ flex: 1 }}>
+              <div className="exam-header-content">
                 <div className="exam-title-row">
                   <h3>{exam.subject}</h3>
                   <span className="priority-badge">
@@ -106,22 +106,21 @@ export default function Exams() {
             </div>
 
             <div className="exam-stats-grid">
-              <div>
-                <p className="stat-label">Difficulty</p>
-                <div className={`difficulty-badge ${getDifficultyClass(exam.difficulty)}`}>
-                  {exam.difficulty}/5
-                </div>
-              </div>
-              <div>
-                <p className="stat-label">Current Prep</p>
-                <div className="stat-value">{exam.currentKnowledge}/5</div>
-              </div>
-              <div>
-                <p className="stat-label">Scheduled</p>
-                <div className="stat-value">{exam.totalScheduledHours?.toFixed(1) || 0}h</div>
-              </div>
-            </div>
-
+  <div>
+    <p className="stat-label">Difficulty</p>
+    <div className={`difficulty-badge ${getDifficultyClass(exam.difficulty)}`}>
+      {exam.difficulty}/5
+    </div>
+  </div>
+  <div>
+    <p className="stat-label">Current Prep</p>
+    <div className="stat-value">{exam.currentKnowledge}/5</div>
+  </div>  
+  <div>
+    <p className="stat-label">Scheduled</p>
+    <div className="stat-value">{exam.totalScheduledHours?.toFixed(1) || 0}h</div>
+  </div>
+</div>
             <div className="progress-section">
               <p className="stat-label">
                 Progress: {exam.completedHours?.toFixed(1) || 0}h / {exam.totalScheduledHours?.toFixed(1) || 0}h
@@ -129,7 +128,7 @@ export default function Exams() {
               <div className="progress-bar">
                 <div
                   className={`progress-fill ${exam.progress === 100? 'complete' : ''}`}
-                  style={{ width: `${exam.progress || 0}%` }}
+                  style={{ '--progress': `${exam.progress || 0}%` }}
                 />
               </div>
               <p className="progress-text">{exam.progress || 0}% complete</p>

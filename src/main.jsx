@@ -1,16 +1,25 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
-import './assets/styles.css'
 import { BrowserRouter } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext.jsx' 
+import { AuthProvider } from './context/AuthContext.jsx'
+import { ColorProvider } from './context/ColorConstraints.jsx'
+import { ScheduleProvider } from './context/ScheduleContext.jsx'
+
+// Import variables FIRST, then other CSS
+import './assets/variables.css'
+import './assets/styles.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider> {/* ← Add this wrapper */}
-        <App />
-      </AuthProvider> {/* ← Close it here */}
+      <ColorProvider>
+        <AuthProvider>
+          <ScheduleProvider>
+            <App />
+          </ScheduleProvider>
+        </AuthProvider>
+      </ColorProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

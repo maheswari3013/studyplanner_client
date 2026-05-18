@@ -1,70 +1,68 @@
 import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import axios from 'axios';
-import '../assets/styles.css';
+import { userApi } from '../api/userApi';
+import '../assets/Auth.css'; // Use dedicated CSS file, not styles.css
 
-const API_URL = import.meta.env.VITE_API_URL;
+// Password validation: 8+ chars, 1 uppercase, 1 number, 1 special char
+const validatePassword = (password) => {
+  const minLength = password.length >= 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  
+  if (!minLength) return 'Password must be at least 8 characters';
+  if (!hasUpper) return 'Password must contain 1 uppercase letter';
+  if (!hasNumber) return 'Password must contain 1 number';
+  if (!hasSpecial) return 'Password must contain 1 special character';
+  return '';
+};
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { setAuthData } = useContext(AuthContext); // Changed: use setAuthData
-
-  const generateOtp = async () => {
-    if (!email) {
-      setError('Enter email first');
-      return;
-    }
-    
-    setOtpLoading(true);
-    setError('');
-    
-    try {
-      await axios.post(`${API_URL}/auth/send-otp`, { email });
-      alert('OTP sent to your email. Valid for 15 minutes.');
-    } catch (err) {
-      console.error('OTP Error:', err);
-      setError(err.response?.data?.msg || 'Failed to send OTP');
-    }
-    setOtpLoading(false);
-  };
+  const { setAuthData } = useContext(AuthContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSubmitLoading(true);
 
-    if (!email || !password || (!isLogin && !name) || !otp) {
-      setError('Please fill all fields including OTP');
-      setSubmitLoading(false);
+    // Validation
+    if (!email || !password || (!isLogin && !name)) {
+      setError('Please fill all fields');
       return;
     }
 
-    try {
-      const endpoint = isLogin ? '/auth/login' : '/auth/register';
-      const payload = isLogin 
-        ? { email, password, otp }
-        : { name, email, password, otp };
+    // Password criteria check - only for register
+    if (!isLogin) {
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        setError(passwordError);
+        return;
+      }
+    }
 
-      const res = await axios.post(`${API_URL}${endpoint}`, payload);
+    setSubmitLoading(true);
+
+    try {
+      const res = isLogin 
+        ? await userApi.login({ email, password })
+        : await userApi.register({ name, email, password });
       
-      // Use response directly - don't call login/register again
       setAuthData(res.data.token, res.data.user); 
       navigate('/agenda');
       
     } catch (err) {
       setError(err.response?.data?.msg || 'Error occurred');
+    } finally {
+      setSubmitLoading(false);
     }
-    setSubmitLoading(false);
   };
 
   return (
@@ -91,31 +89,11 @@ function Auth() {
         />
         <input
           type="password"
-          placeholder="Password - min 6 characters"
+          placeholder={isLogin ? 'Password' : 'Password - 8+ chars, 1 upper, 1 number, 1 special'}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={6}
         />
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="text"
-            placeholder="Enter OTP"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            required
-            style={{ flex: 1 }}
-          />
-          <button
-            type="button"
-            onClick={generateOtp}
-            disabled={otpLoading}
-            className="btn-secondary"
-          >
-            {otpLoading ? 'Sending...' : 'Send OTP'}
-          </button>
-        </div>
 
         <button type="submit" disabled={submitLoading}>
           {submitLoading ? 'Processing...' : isLogin ? 'Login' : 'Register'}
@@ -125,7 +103,6 @@ function Auth() {
       <button className="toggle-auth" onClick={() => {
         setIsLogin(!isLogin);
         setError('');
-        setOtp('');
       }}>
         {isLogin ? 'Need to register?' : 'Already have account?'}
       </button>

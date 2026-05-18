@@ -14,6 +14,20 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+.security-btn-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.email-otp-row {
+  display: flex;
+  gap: 8px;
+}
+
+.email-input-flex {
+  flex: 1;
+}
 
 .profile-loading {
   text-align: center;

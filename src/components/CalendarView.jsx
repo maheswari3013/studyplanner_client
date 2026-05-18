@@ -202,16 +202,14 @@ export default function CalendarView() {
     }
 
     const tempDiv = document.createElement('div');
-    tempDiv.style.padding = '40px';
-    tempDiv.style.background = 'white';
-    tempDiv.style.width = '800px';
+    tempDiv.className = 'pdf-export-temp';
     tempDiv.innerHTML = `
-      <h1 style="margin-bottom: 20px; color: #1f2937;">Study Schedule</h1>
-      <p style="color: #6b7280; margin-bottom: 30px;">${pdfStart} to ${pdfEnd}</p>
+      <h1 class="pdf-title">Study Schedule</h1>
+      <p class="pdf-date-range">${pdfStart} to ${pdfEnd}</p>
       ${filteredBlocks.map(b => `
-        <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
-          <h3 style="margin: 0 0 4px; color: #1f2937;">${b.subject} - ${b.topic}</h3>
-          <p style="margin: 0; color: #6b7280; font-size: 14px;">
+        <div class="pdf-block">
+          <h3 class="pdf-block-title">${b.subject} - ${b.topic}</h3>
+          <p class="pdf-block-meta">
             ${new Date(b.date).toLocaleDateString()} | ${b.startTime} | ${b.duration} min | ${b.type}
           </p>
         </div>
@@ -282,7 +280,7 @@ export default function CalendarView() {
   const getBlocksForDay = (date) => {
     const dateStr = date.toISOString().split('T')[0];
     return blocks.filter(b => b.date.split('T')[0] === dateStr)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+   .sort((a, b) => a.startTime.localeCompare(b.startTime));
   };
 
   const changeDate = (delta) => {
@@ -360,7 +358,7 @@ export default function CalendarView() {
                       <div className="block-icon">
                         <Icon size={20} />
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div className="block-detail-content">
                         <div className="block-title-pro">
                           {block.startTime} - {block.subject}
                         </div>
