@@ -29,12 +29,13 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
-  const setAuthData = (newToken, newUser) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
-  };
+  const setAuthData = (token, userData) => {
+  const cleanToken = token.trim(); // ADD THIS LINE
+  localStorage.setItem('token', cleanToken); // Use cleanToken
+  localStorage.setItem('user', JSON.stringify(userData));
+  setToken(cleanToken); // Use cleanToken
+  setUser(userData);
+};
 
   const logout = () => {
     setToken(null);
