@@ -8,7 +8,7 @@ import TodaysAgenda from './components/TodaysAgenda';
 
 // Lazy load everything else
 const CalendarView = lazy(() => import('./components/CalendarView'));
-const Profile = lazy(() => import('./components/ProfileandSettingsjsx'));
+const Profile = lazy(() => import('./components/ProfileandSettings.jsx'));
 const PlanSetup = lazy(() => import('./components/PlanSetup'));
 const Exams = lazy(() => import('./pages/Exams'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
