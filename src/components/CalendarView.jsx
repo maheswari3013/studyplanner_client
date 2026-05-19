@@ -379,7 +379,7 @@ export default function CalendarView() {
                       </div>
                       <div className="block-detail-content">
                         <div className="block-title-pro">
-                          {block.startTime} - {block.subject} {block.isExam && '(EXAM)'}
+                          {block.Time} - {block.subject} {block.isExam && '(EXAM)'}
                         </div>
                         <div className="block-meta-pro">
                           {block.topic}
