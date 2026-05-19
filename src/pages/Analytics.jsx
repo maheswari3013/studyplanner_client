@@ -10,7 +10,7 @@ const Analytics = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await API.get('/api/schedule/stats');
+        const res = await API.get('/schedule/stats');
         setStats(res.data);
       } catch (err) {
         console.error('Failed to load analytics:', err);
