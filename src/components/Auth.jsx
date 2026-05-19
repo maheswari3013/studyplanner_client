@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userApi } from '../api/userApi';
-import API from '../api/axios'; // This imports from the file above
+import API from '../api/axios';
 import '../assets/Auth.css';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -60,14 +60,32 @@ const Auth = () => {
     setSubmitLoading(true);
     try {
       const res = isLogin
-       ? await userApi.login({ email, password })
+      ? await userApi.login({ email, password })
         : await userApi.register({ name, email, password });
-      setAuthData(res.data.token, res.data.user);
-      if (isLogin) subscribeUser(res.data.token).catch(()=>{});
+
+      console.log('LOGIN RESPONSE:', res.data);
+
+      // Handle both {token, user} and {data: {token, user}} shapes
+      const payload = res.data.data || res.data;
+      const token = payload.token;
+      const user = payload.user;
+
+      if (!token ||!user) {
+        throw new Error('Invalid response from server: missing token or user');
+      }
+
+      setAuthData(token, user);
+
+      if (isLogin) {
+        subscribeUser(token).catch(() => {});
+      }
+
       navigate('/agenda');
     } catch (err) {
-      setError(err.response?.data?.msg || 'Something went wrong');
-      toast.error(err.response?.data?.msg || 'Authentication failed');
+      console.error('Auth error:', err);
+      const msg = err.response?.data?.msg || err.message || 'Authentication failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSubmitLoading(false);
     }
