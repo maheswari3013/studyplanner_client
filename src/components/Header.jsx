@@ -1,11 +1,11 @@
 import { useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Calendar, BookOpen, User, LogOut, ListTodo, Zap } from 'lucide-react';
 import '../assets/Header.css';
 
 export default function Header() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 

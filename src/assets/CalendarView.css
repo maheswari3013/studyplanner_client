@@ -22,7 +22,15 @@
   background: white;
   width: 800px;
 }
-
+.block-exam {
+  background: #dc2626;
+  color: white;
+  border: 2px solid #991b1b;
+  font-weight: 700;
+}
+.block-exam:hover {
+  background: #b91c1c;
+}
 .pdf-title {
   margin-bottom: 20px;
   color: #1f2937;

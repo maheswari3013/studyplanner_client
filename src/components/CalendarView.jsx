@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import API from '../api/axios';
-import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, Clock, Calendar as CalendarIcon, BookOpen, Zap, Coffee } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, Clock, Calendar as CalendarIcon, BookOpen, Zap, Coffee, FileWarning } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import toast, { Toaster } from 'react-hot-toast';
@@ -8,6 +8,7 @@ import '../assets/CalendarView.css';
 
 export default function CalendarView() {
   const [blocks, setBlocks] = useState([]);
+  const [exams, setExams] = useState([]);
   const [view, setView] = useState('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -21,6 +22,7 @@ export default function CalendarView() {
   const [actualMinutes, setActualMinutes] = useState('');
 
   const getBlockData = (block) => {
+    if (block.isExam) return { class: 'block-exam', icon: FileWarning, label: 'EXAM' };
     if (block.missed) return { class: 'block-missed', icon: AlertTriangle, label: 'Missed' };
     if (block.completed) return { class: 'block-done', icon: Zap, label: 'Done' };
     if (block.isBreak) return { class: 'block-break', icon: Coffee, label: 'Break' };
@@ -29,16 +31,20 @@ export default function CalendarView() {
   };
 
   useEffect(() => {
-    fetchBlocks();
+    fetchData();
     checkGoogleConnection();
   }, []);
 
-  const fetchBlocks = async () => {
+  const fetchData = async () => {
     try {
-      const res = await API.get('/schedule');
-      setBlocks(res.data);
+      const [blocksRes, examsRes] = await Promise.all([
+        API.get('/schedule'),
+        API.get('/exams')
+      ]);
+      setBlocks(blocksRes.data);
+      setExams(examsRes.data);
     } catch (err) {
-      console.error('Failed to fetch blocks:', err);
+      console.error('Failed to fetch data:', err);
       toast.error('Failed to load schedule');
     }
   };
@@ -55,7 +61,7 @@ export default function CalendarView() {
       const res = await API.patch(`/schedule/${blockId}/missed`);
       if (res.data.success) {
         toast.success(`Rescheduled! Created ${res.data.newBlocksCreated} new blocks`);
-        fetchBlocks();
+        fetchData();
         setSelectedDay(null);
       }
     } catch (err) {
@@ -73,13 +79,23 @@ export default function CalendarView() {
       toast.success('Time logged');
       setLoggingBlock(null);
       setActualMinutes('');
-      fetchBlocks();
+      fetchData();
       setSelectedDay(null);
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Failed to log time');
     }
   };
-
+  const nukeAll = async () => {
+  if (!window.confirm('Delete ALL blocks from DB?')) return;
+  try {
+    const res = await API.delete('/schedule/clear-all');
+    toast.success(res.data.msg);
+    setBlocks([]); // Clear frontend state immediately
+    setTimeout(() => window.location.reload(), 1000);
+  } catch (err) {
+    toast.error('Failed: ' + err.response?.data?.msg);
+  }
+}
   const downloadWeeklyPDF = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -277,10 +293,35 @@ export default function CalendarView() {
     return days;
   };
 
+  // FIX 5: Keep ONLY this version - delete the duplicate at bottom
   const getBlocksForDay = (date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return blocks.filter(b => b.date.split('T')[0] === dateStr)
-   .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const dayBlocks = blocks.filter(b => {
+      const blockDate = b.date || b.start;
+      return blockDate && blockDate.split('T')[0] === dateStr;
+    });
+
+    const dayExams = exams
+    .filter(e => {
+        const examDate = e.examDate || e.date;
+        return examDate && examDate.split('T')[0] === dateStr;
+      })
+    .map(e => ({
+        _id: e._id,
+        subject: e.subject,
+        topic: e.syllabus || 'EXAM',
+        startTime: e.time || '09:00',
+        duration: 0,
+        type: 'Exam',
+        date: e.examDate || e.date,
+        isExam: true,
+        location: e.location
+      }));
+
+    return [...dayBlocks,...dayExams].sort((a, b) =>
+      a.startTime.localeCompare(b.startTime)
+    );
   };
 
   const changeDate = (delta) => {
@@ -319,6 +360,9 @@ export default function CalendarView() {
           <button onClick={() => setShowPdfModal(true)} className="btn-cal btn-cal-red">
             <FileText size={18} /> Custom PDF
           </button>
+          <button onClick={nukeAll} className="btn-cal" style={{background: '#dc2626'}}>
+  NUKE ALL BLOCKS
+</button>
           <div className="view-toggle-pro">
             <button
               onClick={() => setView('month')}
@@ -348,7 +392,7 @@ export default function CalendarView() {
               </button>
             </div>
             {selectedDay.blocks.length === 0? (
-              <p className="empty-day">No study blocks scheduled</p>
+              <p className="empty-day">No study blocks or exams scheduled</p>
             ) : (
               selectedDay.blocks.map(block => {
                 const { icon: Icon } = getBlockData(block);
@@ -360,18 +404,21 @@ export default function CalendarView() {
                       </div>
                       <div className="block-detail-content">
                         <div className="block-title-pro">
-                          {block.startTime} - {block.subject}
+                          {block.startTime} - {block.subject} {block.isExam && '(EXAM)'}
                         </div>
                         <div className="block-meta-pro">
                           {block.topic}
                         </div>
                         <div className="block-status-pro">
-                          Planned: {block.duration} min | {block.type}
-                          {block.actualDuration > 0 && ` | Actual: ${block.actualDuration} min`}
+                          {block.isExam? (
+                            `Location: ${block.location || 'TBA'}`
+                          ) : (
+                            `Planned: ${block.duration} min | ${block.type} ${block.actualDuration > 0? `| Actual: ${block.actualDuration} min` : ''}`
+                          )}
                         </div>
                       </div>
                       <div className="block-actions-pro">
-                        {!block.completed &&!block.missed &&!block.isBreak && (
+                        {!block.completed &&!block.missed &&!block.isBreak &&!block.isExam && (
                           <button
                             onClick={() => handleMarkMissed(block._id)}
                             className="missed-btn-pro"
@@ -380,7 +427,7 @@ export default function CalendarView() {
                             <AlertTriangle size={14} /> Missed
                           </button>
                         )}
-                        {block.completed &&!block.isBreak && (
+                        {block.completed &&!block.isBreak &&!block.isExam && (
                           <button
                             onClick={() => setLoggingBlock(block)}
                             className="log-btn-pro"
@@ -507,7 +554,7 @@ export default function CalendarView() {
                       title={`${block.startTime} - ${block.subject}: ${block.topic}`}
                     >
                       <Icon size={12} />
-                      <span>{block.startTime} {block.subject}</span>
+                      <span>{block.isExam? `📝 ${block.subject}` : `${block.startTime} ${block.subject}`}</span>
                       {block.actualDuration > 0 && <span className="actual-badge-pro">{block.actualDuration}m</span>}
                     </div>
                   );

@@ -1,69 +1,46 @@
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
 import { userApi } from '../api/userApi';
-import '../assets/Auth.css'; // Use dedicated CSS file, not styles.css
+import '../assets/Auth.css';
+import { useAuth } from '../context/AuthContext';
 
-// Password validation: 8+ chars, 1 uppercase, 1 number, 1 special char
-const validatePassword = (password) => {
-  const minLength = password.length >= 8;
-  const hasUpper = /[A-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-  
-  if (!minLength) return 'Password must be at least 8 characters';
-  if (!hasUpper) return 'Password must contain 1 uppercase letter';
-  if (!hasNumber) return 'Password must contain 1 number';
-  if (!hasSpecial) return 'Password must contain 1 special character';
-  return '';
-};
-
-function Auth() {
+const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
-  
+  const { setAuthData } = useAuth(); 
   const navigate = useNavigate();
-  const { setAuthData } = useContext(AuthContext);
+
+  const { name, email, password } = formData;
+
+  const onChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    // Validation
-    if (!email || !password || (!isLogin && !name)) {
-      setError('Please fill all fields');
-      return;
-    }
-
-    // Password criteria check - only for register
-    if (!isLogin) {
-      const passwordError = validatePassword(password);
-      if (passwordError) {
-        setError(passwordError);
-        return;
-      }
-    }
-
     setSubmitLoading(true);
-
+    
     try {
-      const res = isLogin 
+      const res = isLogin
         ? await userApi.login({ email, password })
         : await userApi.register({ name, email, password });
+
+      console.log('Login response:', res.data); // Should show {token: '...', user: {...}}
       
+      // This one line handles localStorage + axios headers + context state
       setAuthData(res.data.token, res.data.user); 
-      navigate('/agenda');
       
+      navigate('/agenda');
+
     } catch (err) {
-      setError(err.response?.data?.msg || 'Error occurred');
-    } finally {
-      setSubmitLoading(false);
+      console.error('Auth error:', err.response);
+      setError(err.response?.data?.msg || 'Something went wrong');
     }
   };
+
 
   return (
     <div className="auth-container">
@@ -71,34 +48,37 @@ function Auth() {
       {error && <p className="error-msg">{error}</p>}
 
       <form onSubmit={handleSubmit} className="auth-form">
-        {!isLogin && (
-          <input
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        )}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder={isLogin ? 'Password' : 'Password - 8+ chars, 1 upper, 1 number, 1 special'}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+  {!isLogin && (
+    <input
+      type="text"
+      name="name" // ADDED
+      placeholder="Name"
+      value={name}
+      onChange={onChange} // CHANGED: was setName
+      required
+    />
+  )}
+  <input
+    type="email"
+    name="email" // ADDED - this fixes email
+    placeholder="Email"
+    value={email}
+    onChange={onChange}
+    required
+  />
+  <input
+    type="password"
+    name="password" // ADDED
+    placeholder={isLogin? 'Password' : 'Password - 8+ chars, 1 upper, 1 number, 1 special'}
+    value={password}
+    onChange={onChange} // CHANGED: was setPassword
+    required
+  />
 
-        <button type="submit" disabled={submitLoading}>
-          {submitLoading ? 'Processing...' : isLogin ? 'Login' : 'Register'}
-        </button>
-      </form>
+  <button type="submit" disabled={submitLoading}>
+    {submitLoading? 'Processing...' : isLogin? 'Login' : 'Register'}
+  </button>
+</form>
 
       <button className="toggle-auth" onClick={() => {
         setIsLogin(!isLogin);

@@ -6,8 +6,6 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/plansetup.css';
-import { examApi } from '../api/examApi';
-import { scheduleApi } from '../api/scheduleApi';
 
 const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
@@ -77,6 +75,13 @@ function SortableExam({ exam, idx, updateExam, updateTopic, addTopic, removeTopi
             onChange={e => updateExam(idx, 'time', e.target.value)}
           />
         </div>
+        <input
+          className="form-input"
+          placeholder="Location/Exam Hall (optional)"
+          value={exam.location}
+          onChange={e => updateExam(idx, 'location', e.target.value)}
+          style={{marginTop: '12px'}}
+        />
       </div>
 
       <div className="form-grid-3 form-section">
@@ -257,6 +262,7 @@ export default function PlanSetup() {
       subject: '',
       date: '',
       time: '09:00',
+      location: '',
       difficulty: 3,
       currentKnowledge: 3,
       priority: 1,
@@ -305,7 +311,7 @@ export default function PlanSetup() {
   const addTopic = (examIdx) => {
     const newExams = [...exams];
     const newTopic = exams[examIdx].hourMode === 'topic'
-  ? { name: '', hours: 10 }
+ ? { name: '', hours: 10 }
       : '';
     newExams[examIdx].syllabusTopics.push(newTopic);
     setExams(newExams);
@@ -360,6 +366,7 @@ export default function PlanSetup() {
       subject: '',
       date: '',
       time: '09:00',
+      location: '',
       difficulty: 3,
       currentKnowledge: 3,
       priority: exams.length + 1,
@@ -380,25 +387,39 @@ export default function PlanSetup() {
     e.preventDefault();
     setLoading(true);
 
-    const payloadExams = exams.map((exam, idx) => ({
-      subject: exam.subject,
-      examDate: exam.date,
-      time: exam.time,
-      difficulty: exam.difficulty,
-      currentKnowledge: exam.currentKnowledge,
-      priority: idx + 1,
-      totalHours: exam.hourMode === 'subject'? exam.totalHours : undefined,
-      syllabusTopics: exam.hourMode === 'topic'
-    ? exam.syllabusTopics.filter(t => t.name?.trim())
-        : exam.syllabusTopics.filter(t => typeof t === 'string' && t.trim()),
-      availableHours: exam.availableHours,
-      breakRatio: exam.breakRatio
-    }));
-
-    const payload = { exams: payloadExams, config };
-
     try {
-      const res = await API.post('/schedule/generate', payload);
+      // STEP 1: Save all exams to DB first
+      const savedExams = [];
+      for (let i = 0; i < exams.length; i++) {
+        const exam = exams[i];
+        const examPayload = {
+          subject: exam.subject,
+          examDate: exam.date,
+          time: exam.time,
+          location: exam.location,
+          difficulty: exam.difficulty,
+          currentKnowledge: exam.currentKnowledge,
+          priority: i + 1,
+          totalHours: exam.hourMode === 'subject'? exam.totalHours : undefined,
+          syllabusTopics: exam.hourMode === 'topic'
+       ? exam.syllabusTopics.filter(t => t.name?.trim())
+            : exam.syllabusTopics.filter(t => typeof t === 'string' && t.trim()),
+          availableHours: exam.availableHours,
+          breakRatio: exam.breakRatio
+        };
+
+        const res = await API.post('/exams', examPayload);
+        savedExams.push(res.data);
+        toast.success(`Saved ${exam.subject}`);
+      }
+
+      // STEP 2: Generate schedule using saved exams
+      const schedulePayload = {
+        exams: savedExams,
+        config
+      };
+
+      const res = await API.post('/schedule/generate', schedulePayload);
 
       if (!res.data.success) {
         res.data.conflicts?.forEach(c => {
@@ -415,7 +436,7 @@ export default function PlanSetup() {
         return;
       }
 
-      toast.success(`Generated ${res.data.count} blocks`);
+      toast.success(`Generated ${res.data.count} study blocks`);
       navigate('/calendar');
     } catch (err) {
       console.error('Generate error:', err.response?.data);
@@ -429,7 +450,7 @@ export default function PlanSetup() {
           }
         });
       } else {
-        toast.error(err.response?.data?.msg || 'Failed to generate plan');
+        toast.error(err.response?.data?.msg || 'Failed to save exams or generate plan');
       }
     } finally {
       setLoading(false);
@@ -441,7 +462,7 @@ export default function PlanSetup() {
       <Toaster position="top-right" />
       <h2>Study Planner Setup</h2>
       <p className="plansetup-subtitle">
-        Drag ⋮⋮ to reorder priority. Top exam gets scheduled first.
+        Drag ⋮⋮ to reorder priority. Exams are saved when you generate the plan.
       </p>
       <form onSubmit={handleSubmit}>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -481,7 +502,7 @@ export default function PlanSetup() {
         </div>
 
         <button type="submit" disabled={loading} className="btn-generate">
-          {loading? 'Generating...' : 'Generate Plan'}
+          {loading? 'Saving Exams & Generating...' : 'Save Exams + Generate Plan'}
         </button>
       </form>
     </div>

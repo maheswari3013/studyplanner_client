@@ -41,7 +41,7 @@ export default function TodaysAgenda() {
   };
 
   const markMissed = async (id) => {
-    await API.patch(`/schedule/${id}/missed`);
+    await API.patch(`/schedule/${id}/missed`,{});
     setActiveTimerBlock(null);
     setFocusModeBlock(null);
     fetchToday();
