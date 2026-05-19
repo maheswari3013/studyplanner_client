@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import axios from 'axios';
+import API from '../api/axios';
 
 const Analytics = () => {
   const { user } = useContext(AuthContext);
@@ -10,7 +10,7 @@ const Analytics = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get('/api/schedule/stats');
+        const res = await API.get('/api/schedule/stats');
         setStats(res.data);
       } catch (err) {
         console.error('Failed to load analytics:', err);

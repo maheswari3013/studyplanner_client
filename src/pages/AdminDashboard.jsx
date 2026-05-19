@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, BookOpen, Clock, TrendingUp, Shield, Trash2, RefreshCw } from 'lucide-react';
 import API from '../api/axios';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/AdminDashboard.css';
-import { userApi } from '../api/userApi';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ totalUsers: 0, totalExams: 0, totalHours: 0, activeToday: 0 });
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchAdminData();
@@ -17,6 +19,7 @@ export default function AdminDashboard() {
 
   const fetchAdminData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [statsRes, usersRes] = await Promise.all([
         API.get('/admin/stats'),
@@ -25,7 +28,14 @@ export default function AdminDashboard() {
       setStats(statsRes.data);
       setUsers(usersRes.data);
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to load admin data');
+      const msg = err.response?.data?.msg || 'Failed to load admin data';
+      setError(msg);
+      if (err.response?.status === 403) {
+        toast.error('Admin access required');
+        setTimeout(() => navigate('/agenda'), 1500);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -35,7 +45,7 @@ export default function AdminDashboard() {
     setRefreshing(true);
     await fetchAdminData();
     setRefreshing(false);
-    toast.success('Data refreshed');
+    if (!error) toast.success('Data refreshed');
   };
 
   const handleDeleteUser = async (userId, name) => {
@@ -45,7 +55,7 @@ export default function AdminDashboard() {
       toast.success('User deleted');
       fetchAdminData();
     } catch (err) {
-      toast.error('Failed to delete user');
+      toast.error(err.response?.data?.msg || 'Failed to delete user');
     }
   };
 
@@ -56,11 +66,24 @@ export default function AdminDashboard() {
       toast.success('User data reset');
       fetchAdminData();
     } catch (err) {
-      toast.error('Failed to reset data');
+      toast.error(err.response?.data?.msg || 'Failed to reset data');
     }
   };
 
   if (loading) return <div className="admin-loading">Loading admin dashboard...</div>;
+  
+  if (error) return (
+    <div className="admin-container">
+      <div className="admin-error">
+        <Shield size={48} />
+        <h2>Access Denied</h2>
+        <p>{error}</p>
+        <button onClick={() => navigate('/agenda')} className="btn-back">
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="admin-container">
@@ -76,7 +99,7 @@ export default function AdminDashboard() {
           className="btn-refresh"
           disabled={refreshing}
         >
-          <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
+          <RefreshCw size={18} className={refreshing? 'spinning' : ''} />
           Refresh
         </button>
       </div>
@@ -108,7 +131,7 @@ export default function AdminDashboard() {
           </div>
           <div className="stat-content">
             <p className="stat-label">Study Hours Logged</p>
-            <p className="stat-value">{stats.totalHours.toFixed(1)}h</p>
+            <p className="stat-value">{stats.totalHours?.toFixed(1) || 0}h</p>
           </div>
         </div>
 
@@ -126,7 +149,7 @@ export default function AdminDashboard() {
       <div className="users-section">
         <h2 className="section-title">User Management</h2>
         
-        {users.length === 0 ? (
+        {users.length === 0? (
           <div className="empty-state">No users found</div>
         ) : (
           <div className="users-table-wrapper">
@@ -145,18 +168,22 @@ export default function AdminDashboard() {
               <tbody>
                 {users.map(user => (
                   <tr key={user._id}>
-                    <td className="user-name">{user.name}</td>
+                    <td className="user-name">
+                      {user.name}
+                      {user.isAdmin && <span className="admin-badge">Admin</span>}
+                    </td>
                     <td className="user-email">{user.email}</td>
                     <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="text-center">{user.examCount || 0}</td>
                     <td className="text-center">{user.totalHours?.toFixed(1) || 0}h</td>
-                    <td>{user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'Never'}</td>
+                    <td>{user.lastActive? new Date(user.lastActive).toLocaleDateString() : 'Never'}</td>
                     <td>
                       <div className="action-buttons">
                         <button
                           onClick={() => handleResetUserData(user._id, user.name)}
                           className="btn-action btn-reset"
                           title="Reset user data"
+                          disabled={user.isAdmin}
                         >
                           Reset
                         </button>
@@ -164,6 +191,7 @@ export default function AdminDashboard() {
                           onClick={() => handleDeleteUser(user._id, user.name)}
                           className="btn-action btn-delete"
                           title="Delete user"
+                          disabled={user.isAdmin}
                         >
                           <Trash2 size={16} />
                         </button>

@@ -17,12 +17,24 @@ export default function FocusMode({ block, onClose, onComplete, onNeedMoreTime }
     enterFullscreen();
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') handleClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (confirm('Exit Focus Mode? Your timer will pause.')) {
+          handleClose();
+        }
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
 
+    const preventLeave = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', preventLeave);
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('beforeunload', preventLeave);
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
@@ -37,16 +49,16 @@ export default function FocusMode({ block, onClose, onComplete, onNeedMoreTime }
   };
 
   return (
-    <div className={`focus-overlay ${isDark ? 'dark' : 'light'}`}>
+    <div className={`focus-overlay ${isDark? 'dark' : 'light'}`}>
       <div className="focus-particles" />
 
       <div className="focus-controls">
         <button
           onClick={() => setIsDark(!isDark)}
           className="focus-btn theme-btn"
-          title={isDark ? 'Light mode' : 'Dark mode'}
+          title={isDark? 'Light mode' : 'Dark mode'}
         >
-          {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          {isDark? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
         <button
@@ -66,14 +78,17 @@ export default function FocusMode({ block, onClose, onComplete, onNeedMoreTime }
           <h2 className="focus-title">Focus Mode</h2>
         </div>
 
-        <div className="focus-timer-card">
+        <div
+          className="focus-timer-card"
+          style={{ borderTop: `3px solid ${block.color || '#667eea'}` }}
+        >
           <StudyTimer
             block={block}
             onComplete={(id) => {
               onComplete(id);
               handleClose();
             }}
-            onNeedMoreTime={onNeedMoreTime}
+            onNeedMoreTime={(id, duration) => onNeedMoreTime(id, duration)}
             onClose={handleClose}
           />
         </div>

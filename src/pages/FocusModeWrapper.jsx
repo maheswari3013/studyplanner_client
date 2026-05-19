@@ -1,6 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import FocusMode from './FocusMode';
+import API from '../api/axios';
 import { useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 export default function FocusModeWrapper() {
   const location = useLocation();
@@ -9,18 +11,44 @@ export default function FocusModeWrapper() {
 
   useEffect(() => {
     if (!block) {
-      navigate('/agenda'); // Redirect if no block passed
+      navigate('/agenda');
     }
   }, [block, navigate]);
 
   if (!block) return null;
 
+  const handleComplete = async (id) => {
+    try {
+      await API.patch(`/schedule/${id}/complete`);
+      toast.success('Block completed!');
+      navigate('/agenda');
+    } catch (err) {
+      toast.error('Failed to mark complete');
+    }
+  };
+
+  const handleNeedMoreTime = async (id, currentDuration) => {
+    try {
+      await API.patch(`/schedule/${id}`, {
+        duration: currentDuration + 15
+      });
+      toast.success('+15 minutes added');
+      const res = await API.get(`/schedule/today`);
+      const updatedBlock = res.data.find(b => b._id === id);
+      if (updatedBlock) {
+        navigate('/focus', { state: { block: updatedBlock }, replace: true });
+      }
+    } catch (err) {
+      toast.error('Failed to add time');
+    }
+  };
+
   return (
     <FocusMode
       block={block}
       onClose={() => navigate('/agenda')}
-      onComplete={() => navigate('/agenda')}
-      onNeedMoreTime={() => {}} // Handle if needed
+      onComplete={handleComplete}
+      onNeedMoreTime={handleNeedMoreTime}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useContext, lazy, Suspense } from 'react';
 import { AuthContext } from './context/AuthContext';
+import { useAuth } from './context/AuthContext'; // ← ADD THIS
 import Header from './components/Header';
 import Auth from './components/Auth';
 import TodaysAgenda from './components/TodaysAgenda';
@@ -17,6 +18,14 @@ const Settings = lazy(() => import('./pages/Settings'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+// Move AdminRoute outside App to avoid re-creating on every render
+function AdminRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/auth" />;
+  if (user?.role !== 'admin') return <Navigate to="/dashboard" />;
+  return children;
+}
+
 function App() {
   const { user, logout } = useContext(AuthContext);
 
@@ -28,7 +37,7 @@ function App() {
 
   return (
     <>
-      <Header user={user} logout={logout} />
+      <Header /> {/* ← Remove props, Header uses useAuth() internally */}
       
       <main style={{ padding: '20px' }}>
         <Suspense fallback={<LoadingFallback />}>
@@ -46,7 +55,13 @@ function App() {
             <Route path="/exams" element={user ? <Exams /> : <Navigate to="/auth" />} />
             <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/auth" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/auth" />} />
-            <Route path="/admin" element={user ? <AdminDashboard /> : <Navigate to="/auth" />} />
+            
+            {/* Admin Route - NOW PROTECTED */}
+            <Route path="/admin" element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            } />
 
             {/* Default + 404 */}
             <Route path="/" element={<Navigate to={user ? "/agenda" : "/auth"} />} />

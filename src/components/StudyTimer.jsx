@@ -10,6 +10,27 @@ export default function StudyTimer({ block, onComplete, onNeedMoreTime, onClose 
   const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
   const isBreak = block.isBreak;
 
+  // Restore from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`timer_${block._id}`);
+    if (saved) setSecondsLeft(parseInt(saved));
+  }, [block._id]);
+
+  // Save to localStorage
+  useEffect(() => {
+    localStorage.setItem(`timer_${block._id}`, secondsLeft);
+    if (secondsLeft === 0) localStorage.removeItem(`timer_${block._id}`);
+  }, [secondsLeft, block._id]);
+
+  // Auto-pause when tab hidden
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden && isRunning) setIsRunning(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isRunning]);
+
   useEffect(() => {
     let interval;
     if (isRunning && secondsLeft > 0) {
@@ -18,6 +39,7 @@ export default function StudyTimer({ block, onComplete, onNeedMoreTime, onClose 
       }, 1000);
     } else if (secondsLeft === 0 && isRunning) {
       setIsRunning(false);
+      new Audio('/notification.mp3').play().catch(() => {});
       onComplete(block._id);
     }
     return () => clearInterval(interval);
@@ -43,13 +65,12 @@ export default function StudyTimer({ block, onComplete, onNeedMoreTime, onClose 
       )}
 
       <div className="timer-header">
-        <p className={`timer-label ${isBreak ? 'break' : ''}`}>
-          {isBreak ? 'Break Time' : block.subject}
+        <p className={`timer-label ${isBreak? 'break' : ''}`}>
+          {isBreak? 'Break Time' : block.subject}
         </p>
         <h3 className="timer-topic">{block.topic}</h3>
       </div>
 
-      {/* Circular Progress */}
       <div className="timer-progress-wrap">
         <svg className="timer-svg" width="220" height="220">
           <defs>
@@ -68,25 +89,24 @@ export default function StudyTimer({ block, onComplete, onNeedMoreTime, onClose 
           />
           <circle
             cx="110" cy="110" r="100"
-            className={`timer-circle-fg ${isBreak ? 'break' : 'study'}`}
+            className={`timer-circle-fg ${isBreak? 'break' : 'study'}`}
             strokeDasharray={2 * Math.PI * 100}
             strokeDashoffset={2 * Math.PI * 100 * (1 - progress / 100)}
           />
         </svg>
         <div className="timer-time-display">
           <span className="timer-time">{formatTime(secondsLeft)}</span>
-          <span className="timer-status">{isRunning ? 'Running' : 'Paused'}</span>
+          <span className="timer-status">{isRunning? 'Running' : 'Paused'}</span>
         </div>
       </div>
 
-      {/* Controls */}
       <div className="timer-controls">
         <button
           onClick={() => setIsRunning(!isRunning)}
-          className={`timer-btn timer-btn-play ${isBreak ? 'break' : ''}`}
-          title={isRunning ? 'Pause' : 'Play'}
+          className={`timer-btn timer-btn-play ${isBreak? 'break' : ''}`}
+          title={isRunning? 'Pause' : 'Play'}
         >
-          {isRunning ? <Pause size={24} /> : <Play size={24} />}
+          {isRunning? <Pause size={24} /> : <Play size={24} />}
         </button>
         <button
           onClick={handleReset}
@@ -97,7 +117,7 @@ export default function StudyTimer({ block, onComplete, onNeedMoreTime, onClose 
         </button>
         {!isBreak && (
           <button
-            onClick={() => onNeedMoreTime(block._id)}
+            onClick={() => onNeedMoreTime(block._id, block.duration)}
             className="timer-btn timer-btn-more"
           >
             +15 min

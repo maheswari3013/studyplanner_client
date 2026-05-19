@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, Clock, Calendar as CalendarIcon, BookOpen, Zap, Coffee, FileWarning } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/CalendarView.css';
 
@@ -70,7 +68,7 @@ export default function CalendarView() {
   };
 
   const logTime = async () => {
-    if (!loggingBlock ||!actualMinutes) return toast.error('Enter minutes');
+    if (!loggingBlock || !actualMinutes) return toast.error('Enter minutes');
     try {
       await API.post('/schedule/log', {
         blockId: loggingBlock._id,
@@ -85,17 +83,19 @@ export default function CalendarView() {
       toast.error(err.response?.data?.msg || 'Failed to log time');
     }
   };
+
   const nukeAll = async () => {
-  if (!window.confirm('Delete ALL blocks from DB?')) return;
-  try {
-    const res = await API.delete('/schedule/clear-all');
-    toast.success(res.data.msg);
-    setBlocks([]); // Clear frontend state immediately
-    setTimeout(() => window.location.reload(), 1000);
-  } catch (err) {
-    toast.error('Failed: ' + err.response?.data?.msg);
-  }
-}
+    if (!window.confirm(`Delete ALL ${blocks.length} blocks from DB?`)) return;
+    try {
+      const res = await API.delete('/schedule/clear-all');
+      toast.success(res.data.msg);
+      setBlocks([]);
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      toast.error('Failed: ' + err.response?.data?.msg);
+    }
+  };
+
   const downloadWeeklyPDF = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -122,6 +122,32 @@ export default function CalendarView() {
     }
   };
 
+  const exportPDF = async () => {
+    if (!pdfStart || !pdfEnd) return toast.error('Select start and end dates');
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const baseURL = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${baseURL}/schedule/export/pdf?start=${pdfStart}&end=${pdfEnd}`, {
+        headers: { 'x-auth-token': token }
+      });
+      if (!res.ok) throw new Error('Failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `study-schedule-${pdfStart}-to-${pdfEnd}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      setShowPdfModal(false);
+      toast.success('PDF exported');
+    } catch (err) {
+      toast.error('PDF export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const exportICS = () => {
     const icsContent = [
       'BEGIN:VCALENDAR',
@@ -131,7 +157,7 @@ export default function CalendarView() {
       'METHOD:PUBLISH'
     ];
 
-    const activeBlocks = blocks.filter(b =>!b.missed &&!b.completed);
+    const activeBlocks = blocks.filter(b => !b.missed && !b.completed);
 
     if (activeBlocks.length === 0) {
       toast.error('No active study blocks to export');
@@ -202,68 +228,6 @@ export default function CalendarView() {
     }
   };
 
-  const exportPDF = async () => {
-    if (!pdfStart ||!pdfEnd) return toast.error('Select start and end dates');
-    setExporting(true);
-
-    const filteredBlocks = blocks.filter(b => {
-      const d = b.date.split('T')[0];
-      return d >= pdfStart && d <= pdfEnd &&!b.missed;
-    });
-
-    if (filteredBlocks.length === 0) {
-      toast.error('No study blocks in selected range');
-      setExporting(false);
-      return;
-    }
-
-    const tempDiv = document.createElement('div');
-    tempDiv.className = 'pdf-export-temp';
-    tempDiv.innerHTML = `
-      <h1 class="pdf-title">Study Schedule</h1>
-      <p class="pdf-date-range">${pdfStart} to ${pdfEnd}</p>
-      ${filteredBlocks.map(b => `
-        <div class="pdf-block">
-          <h3 class="pdf-block-title">${b.subject} - ${b.topic}</h3>
-          <p class="pdf-block-meta">
-            ${new Date(b.date).toLocaleDateString()} | ${b.startTime} | ${b.duration} min | ${b.type}
-          </p>
-        </div>
-      `).join('')}
-    `;
-    document.body.appendChild(tempDiv);
-
-    try {
-      const canvas = await html2canvas(tempDiv, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`study-schedule-${pdfStart}-to-${pdfEnd}.pdf`);
-      setShowPdfModal(false);
-      toast.success('PDF exported');
-    } catch (err) {
-      toast.error('PDF export failed');
-    } finally {
-      document.body.removeChild(tempDiv);
-      setExporting(false);
-    }
-  };
-
   const getMonthDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -293,21 +257,24 @@ export default function CalendarView() {
     return days;
   };
 
-  // FIX 5: Keep ONLY this version - delete the duplicate at bottom
   const getBlocksForDay = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    // FIXED: Use local date instead of UTC
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
 
     const dayBlocks = blocks.filter(b => {
-      const blockDate = b.date || b.start;
-      return blockDate && blockDate.split('T')[0] === dateStr;
+      const blockDate = (b.date || b.start)?.split('T')[0];
+      return blockDate === dateStr;
     });
 
     const dayExams = exams
-    .filter(e => {
-        const examDate = e.examDate || e.date;
-        return examDate && examDate.split('T')[0] === dateStr;
+      .filter(e => {
+        const examDate = (e.examDate || e.date)?.split('T')[0];
+        return examDate === dateStr;
       })
-    .map(e => ({
+      .map(e => ({
         _id: e._id,
         subject: e.subject,
         topic: e.syllabus || 'EXAM',
@@ -316,10 +283,11 @@ export default function CalendarView() {
         type: 'Exam',
         date: e.examDate || e.date,
         isExam: true,
-        location: e.location
+        location: e.location,
+        color: e.color || '#dc2626'
       }));
 
-    return [...dayBlocks,...dayExams].sort((a, b) =>
+    return [...dayBlocks, ...dayExams].sort((a, b) =>
       a.startTime.localeCompare(b.startTime)
     );
   };
@@ -334,7 +302,7 @@ export default function CalendarView() {
     setCurrentDate(newDate);
   };
 
-  const days = view === 'month'? getMonthDays() : getWeekDays();
+  const days = view === 'month' ? getMonthDays() : getWeekDays();
   const monthYear = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
@@ -355,24 +323,24 @@ export default function CalendarView() {
             <Download size={18} /> Export.ics
           </button>
           <button onClick={syncGoogle} className="btn-cal btn-cal-blue" disabled={syncing}>
-            <Link size={18} /> {syncing? 'Syncing...' : googleConnected? 'Sync to Google' : 'Connect'}
+            <Link size={18} /> {syncing ? 'Syncing...' : googleConnected ? 'Sync to Google' : 'Connect'}
           </button>
           <button onClick={() => setShowPdfModal(true)} className="btn-cal btn-cal-red">
             <FileText size={18} /> Custom PDF
           </button>
           <button onClick={nukeAll} className="btn-cal" style={{background: '#dc2626'}}>
-  NUKE ALL BLOCKS
-</button>
+            NUKE ALL BLOCKS
+          </button>
           <div className="view-toggle-pro">
             <button
               onClick={() => setView('month')}
-              className={`view-btn-pro ${view === 'month'? 'active' : ''}`}
+              className={`view-btn-pro ${view === 'month' ? 'active' : ''}`}
             >
               Month
             </button>
             <button
               onClick={() => setView('week')}
-              className={`view-btn-pro ${view === 'week'? 'active' : ''}`}
+              className={`view-btn-pro ${view === 'week' ? 'active' : ''}`}
             >
               Week
             </button>
@@ -391,15 +359,16 @@ export default function CalendarView() {
                 <X size={20} />
               </button>
             </div>
-            {selectedDay.blocks.length === 0? (
+            {selectedDay.blocks.length === 0 ? (
               <p className="empty-day">No study blocks or exams scheduled</p>
             ) : (
               selectedDay.blocks.map(block => {
                 const { icon: Icon } = getBlockData(block);
+                const blockColor = block.color || '#3B82F6';
                 return (
-                  <div key={block._id} className={`block-detail-pro ${getBlockData(block).class}`}>
+                  <div key={block._id} className={`block-detail-pro ${getBlockData(block).class}`} style={{ borderLeft: `4px solid ${blockColor}` }}>
                     <div className="block-detail-header-pro">
-                      <div className="block-icon">
+                      <div className="block-icon" style={{ color: blockColor }}>
                         <Icon size={20} />
                       </div>
                       <div className="block-detail-content">
@@ -410,15 +379,15 @@ export default function CalendarView() {
                           {block.topic}
                         </div>
                         <div className="block-status-pro">
-                          {block.isExam? (
+                          {block.isExam ? (
                             `Location: ${block.location || 'TBA'}`
                           ) : (
-                            `Planned: ${block.duration} min | ${block.type} ${block.actualDuration > 0? `| Actual: ${block.actualDuration} min` : ''}`
+                            `Planned: ${block.duration} min | ${block.type} ${block.actualDuration > 0 ? `| Actual: ${block.actualDuration} min` : ''}`
                           )}
                         </div>
                       </div>
                       <div className="block-actions-pro">
-                        {!block.completed &&!block.missed &&!block.isBreak &&!block.isExam && (
+                        {!block.completed && !block.missed && !block.isBreak && !block.isExam && (
                           <button
                             onClick={() => handleMarkMissed(block._id)}
                             className="missed-btn-pro"
@@ -427,13 +396,13 @@ export default function CalendarView() {
                             <AlertTriangle size={14} /> Missed
                           </button>
                         )}
-                        {block.completed &&!block.isBreak &&!block.isExam && (
+                        {block.completed && !block.isBreak && !block.isExam && (
                           <button
                             onClick={() => setLoggingBlock(block)}
                             className="log-btn-pro"
                             title="Log actual time spent"
                           >
-                            <Clock size={14} /> {block.actualDuration? 'Update' : 'Log'}
+                            <Clock size={14} /> {block.actualDuration ? 'Update' : 'Log'}
                           </button>
                         )}
                       </div>
@@ -496,10 +465,10 @@ export default function CalendarView() {
             <div className="modal-actions-pro">
               <button
                 onClick={exportPDF}
-                disabled={exporting ||!pdfStart ||!pdfEnd}
+                disabled={exporting || !pdfStart || !pdfEnd}
                 className="btn-primary-pro"
               >
-                {exporting? 'Generating...' : 'Export PDF'}
+                {exporting ? 'Generating...' : 'Export PDF'}
               </button>
               <button
                 onClick={() => { setShowPdfModal(false); setPdfStart(''); setPdfEnd(''); }}
@@ -534,27 +503,29 @@ export default function CalendarView() {
             const dayBlocks = getBlocksForDay(day);
             const isToday = day.toDateString() === new Date().toDateString();
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-            const maxVisible = view === 'week'? 5 : 2;
+            const maxVisible = view === 'week' ? 5 : 2;
 
             return (
               <div
                 key={idx}
-                className={`day-cell-pro ${view === 'week'? 'week-view' : ''} ${isToday? 'today' : ''} ${view === 'month' &&!isCurrentMonth? 'other-month' : ''}`}
+                className={`day-cell-pro ${view === 'week' ? 'week-view' : ''} ${isToday ? 'today' : ''} ${view === 'month' && !isCurrentMonth ? 'other-month' : ''}`}
                 onClick={() => setSelectedDay({ date: day, blocks: dayBlocks })}
               >
-                <div className={`day-number-pro ${isToday? 'today' : ''}`}>
+                <div className={`day-number-pro ${isToday ? 'today' : ''}`}>
                   {day.getDate()}
                 </div>
                 {dayBlocks.slice(0, maxVisible).map(block => {
                   const { icon: Icon } = getBlockData(block);
+                  const blockColor = block.color || '#3B82F6';
                   return (
                     <div
                       key={block._id}
                       className={`block-pro ${getBlockData(block).class}`}
+                      style={{ backgroundColor: blockColor }}
                       title={`${block.startTime} - ${block.subject}: ${block.topic}`}
                     >
                       <Icon size={12} />
-                      <span>{block.isExam? `📝 ${block.subject}` : `${block.startTime} ${block.subject}`}</span>
+                      <span>{block.isExam ? `📝 ${block.subject}` : `${block.startTime} ${block.subject}`}</span>
                       {block.actualDuration > 0 && <span className="actual-badge-pro">{block.actualDuration}m</span>}
                     </div>
                   );

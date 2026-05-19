@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import API from '../api/axios'; 
-import StudyTimer from './StudyTimer';
-import FocusMode from '../pages/FocusMode';
+import { useNavigate } from 'react-router-dom';
+import API from '../api/axios';
+import StudyTimer from '../components/StudyTimer';
 import { Maximize2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import '../assets/TodaysAgenda.css';
 
 export default function TodaysAgenda() {
+  const navigate = useNavigate();
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingBlock, setEditingBlock] = useState(null);
@@ -14,7 +16,6 @@ export default function TodaysAgenda() {
   const [startDate, setStartDate] = useState('');
   const [generating, setGenerating] = useState(false);
   const [activeTimerBlock, setActiveTimerBlock] = useState(null);
-  const [focusModeBlock, setFocusModeBlock] = useState(null);
 
   const fetchToday = async () => {
     setLoading(true);
@@ -34,30 +35,50 @@ export default function TodaysAgenda() {
   }, []);
 
   const markComplete = async (id) => {
-    await API.patch(`/schedule/${id}/complete`);
-    setActiveTimerBlock(null);
-    setFocusModeBlock(null);
-    fetchToday();
+    try {
+      setBlocks(prev => prev.map(b => b._id === id? {...b, completed: true} : b));
+      await API.patch(`/schedule/${id}/complete`);
+      setActiveTimerBlock(null);
+      toast.success('Marked as complete!');
+    } catch (err) {
+      toast.error('Failed to complete');
+      fetchToday();
+    }
   };
 
   const markMissed = async (id) => {
-    await API.patch(`/schedule/${id}/missed`,{});
-    setActiveTimerBlock(null);
-    setFocusModeBlock(null);
-    fetchToday();
+    try {
+      setBlocks(prev => prev.map(b => b._id === id? {...b, missed: true} : b));
+      await API.patch(`/schedule/${id}/missed`, {});
+      setActiveTimerBlock(null);
+      toast.success('Marked as missed. Schedule updated.');
+    } catch (err) {
+      toast.error('Failed to mark missed');
+      fetchToday();
+    }
   };
 
-  const handleNeedMoreTime = async (id) => {
-    await API.patch(`/schedule/${id}`, {
-      $inc: { duration: 15 }
-    });
-    fetchToday();
+  const handleNeedMoreTime = async (id, currentDuration) => {
+    try {
+      await API.patch(`/schedule/${id}`, {
+        duration: currentDuration + 15
+      });
+      toast.success('+15 minutes added');
+      fetchToday();
+    } catch (err) {
+      toast.error('Failed to add time');
+    }
   };
 
   const deleteBlock = async (id) => {
     if (!confirm('Delete this study block?')) return;
-    await API.delete(`/schedule/${id}`);
-    fetchToday();
+    try {
+      await API.delete(`/schedule/${id}`);
+      toast.success('Block deleted');
+      fetchToday();
+    } catch (err) {
+      toast.error('Failed to delete');
+    }
   };
 
   const openEditModal = (block) => {
@@ -72,9 +93,14 @@ export default function TodaysAgenda() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    await API.patch(`/schedule/${editingBlock._id}`, editForm);
-    setEditingBlock(null);
-    fetchToday();
+    try {
+      await API.patch(`/schedule/${editingBlock._id}`, editForm);
+      setEditingBlock(null);
+      toast.success('Block updated');
+      fetchToday();
+    } catch (err) {
+      toast.error('Failed to update');
+    }
   };
 
   const generateSchedule = async () => {
@@ -82,13 +108,13 @@ export default function TodaysAgenda() {
     try {
       const body = startDate? { startDate } : {};
       const res = await API.post('/schedule/generate', body);
-      alert(`Generated ${res.data.count} study blocks starting ${startDate || 'tomorrow'}`);
+      toast.success(`Generated ${res.data.count} study blocks`);
       setShowDateModal(false);
       setStartDate('');
       await fetchToday();
     } catch (err) {
       console.error('Generate failed:', err);
-      alert(err.response?.data?.msg || 'Failed to generate schedule. Add exams first.');
+      toast.error(err.response?.data?.msg || 'Failed to generate schedule');
     } finally {
       setGenerating(false);
     }
@@ -96,16 +122,6 @@ export default function TodaysAgenda() {
 
   return (
     <div className="agenda-container">
-      {/* Focus Mode Overlay - renders on top */}
-      {focusModeBlock && (
-        <FocusMode
-          block={focusModeBlock}
-          onClose={() => setFocusModeBlock(null)}
-          onComplete={markComplete}
-          onNeedMoreTime={handleNeedMoreTime}
-        />
-      )}
-
       <div className="agenda-header">
         <h2>Today's Agenda</h2>
         <button onClick={() => setShowDateModal(true)} disabled={generating} className="btn-generate-schedule">
@@ -113,8 +129,7 @@ export default function TodaysAgenda() {
         </button>
       </div>
 
-      {/* Active Timer - shows below header */}
-      {activeTimerBlock &&!focusModeBlock && (
+      {activeTimerBlock && (
         <StudyTimer
           block={activeTimerBlock}
           onComplete={markComplete}
@@ -175,18 +190,27 @@ export default function TodaysAgenda() {
 
             {!block.completed &&!block.missed && (
               <div className="block-actions">
-                <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
-                  ▶ Start Timer
-                </button>
-                <button onClick={() => setFocusModeBlock(block)} className="btn-focus">
-                  <Maximize2 size={16} /> Focus
-                </button>
+                {!block.isBreak && (
+                  <>
+                    <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
+                      ▶ Start Timer
+                    </button>
+                    <button
+                      onClick={() => navigate('/focus', { state: { block } })}
+                      className="btn-focus"
+                    >
+                      <Maximize2 size={16} /> Focus
+                    </button>
+                  </>
+                )}
                 <button onClick={() => markComplete(block._id)} className="btn-complete">
                   ✓ Complete
                 </button>
-                <button onClick={() => markMissed(block._id)} className="btn-missed">
-                  ✗ Missed
-                </button>
+                {!block.isBreak && (
+                  <button onClick={() => markMissed(block._id)} className="btn-missed">
+                    X Missed
+                  </button>
+                )}
               </div>
             )}
 
