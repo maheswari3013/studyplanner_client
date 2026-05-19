@@ -39,7 +39,7 @@ function App() {
 
   // Push notification subscription
   useEffect(() => {
-    if (!user) return; // Only subscribe logged-in users
+    if (!user) return;
 
     const subscribeToPush = async () => {
       if (!('serviceWorker' in navigator) ||!('PushManager' in window)) {
@@ -55,38 +55,49 @@ function App() {
         }
 
         const registration = await navigator.serviceWorker.ready;
-        
+
         // Check existing subscription first
         let subscription = await registration.pushManager.getSubscription();
-        
+
         if (!subscription) {
-          const vapidPublicKey = import.meta.env.BOHFuuYR-Esh5cxDIUQKh_Vqmvx5xMo70osWEiEZKmbJGQvKegSio0oGQMUbZuAypHhkp6JcZ5HlBu0A2sShFgs; 
-          const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-          
+          // Fetch VAPID key from backend
+          const keyRes = await fetch('https://studyplanner-api-awmh.onrender.com/api/notifications/vapid-public-key', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+
+          if (!keyRes.ok) throw new Error('Failed to fetch VAPID key');
+          const { publicKey } = await keyRes.json();
+
+          const convertedVapidKey = urlBase64ToUint8Array(publicKey);
+
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: convertedVapidKey
           });
         }
 
-        // Send subscription to backend - update endpoint as needed
-        await fetch('/api/notifications/subscribe', {
+        // Send subscription to backend
+        const res = await fetch('https://studyplanner-api-awmh.onrender.com/api/notifications/subscribe', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}` // if you use auth
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify(subscription)
         });
-        
+
+        if (!res.ok) throw new Error('Subscribe request failed');
         console.log('Push subscription successful');
+
       } catch (error) {
         console.error('Push subscription failed:', error);
       }
     };
 
     subscribeToPush();
-  }, [user]); // Re-run when user logs in
+  }, ); // Runs when user logs in
 
   const LoadingFallback = () => (
     <div style={{ textAlign: 'center', marginTop: '50px' }}>
