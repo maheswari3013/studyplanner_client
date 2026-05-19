@@ -2,33 +2,29 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  withCredentials: true // Required for CORS with credentials
+  baseURL: import.meta.env.VITE_API_URL
 });
 
-// Add token to every request
+// Request interceptor - adds token to every request
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Handle errors globally
+// Response interceptor - handles 401 globally
 API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/auth';
-      toast.error('Session expired. Please login again.');
-    }
-    if (error.response?.status === 403) {
-      toast.error('CORS error: Check backend allowed origins');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/auth') {
+        window.location.href = '/auth';
+        toast.error('Session expired. Please login again.');
+      }
     }
     return Promise.reject(error);
   }

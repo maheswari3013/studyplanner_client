@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
-
-const API_URL = 'https://studyplanner-api-awmh.onrender.com/api';
+import API from '../api/axios'; // Use the same instance
 
 export const AuthContext = createContext();
 
@@ -14,15 +12,14 @@ export const AuthProvider = ({ children }) => {
     const loadUser = async () => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`; 
         try {
-          const res = await axios.get(`${API_URL}/auth/user`);
+          const res = await API.get('/auth/user'); // Use API, not axios
           setUser(res.data);
           setToken(storedToken);
         } catch (err) {
           console.error('Load user failed:', err);
           localStorage.removeItem('token');
-          delete axios.defaults.headers.common['Authorization']; 
+          localStorage.removeItem('user');
           setToken(null);
           setUser(null);
         }
@@ -36,14 +33,14 @@ export const AuthProvider = ({ children }) => {
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`; 
+    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization']; 
+    localStorage.removeItem('user');
   };
 
   return (

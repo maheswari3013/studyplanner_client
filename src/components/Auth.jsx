@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userApi } from '../api/userApi';
-import API from '../api/axios'; // Import your axios instance
+import API from '../api/axios';
 import '../assets/Auth.css';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -35,7 +35,7 @@ const Auth = () => {
   }
 
   // Subscribe user to push notifications
-  const subscribeUser = async () => {
+  const subscribeUser = async (token) => {
     try {
       if (!('serviceWorker' in navigator) ||!('PushManager' in window)) {
         console.log('Push notifications not supported');
@@ -56,8 +56,10 @@ const Auth = () => {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
 
-      // Use axios instead of fetch - token is added automatically by interceptor
-      await API.post('/notifications/subscribe', subscription);
+      // Pass token directly to avoid race conditions
+      await API.post('/notifications/subscribe', subscription, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       console.log('Push subscription saved');
       toast.success('Notifications enabled');
@@ -74,7 +76,7 @@ const Auth = () => {
 
     try {
       const res = isLogin
-      ? await userApi.login({ email, password })
+       ? await userApi.login({ email, password })
         : await userApi.register({ name, email, password });
 
       console.log('Login response:', res.data);
@@ -83,7 +85,7 @@ const Auth = () => {
 
       // Subscribe to push notifications after login
       if (isLogin) {
-        await subscribeUser(); // No need to pass token, axios interceptor handles it
+        await subscribeUser(res.data.token); // Pass token directly
       }
 
       navigate('/agenda');
@@ -91,6 +93,7 @@ const Auth = () => {
     } catch (err) {
       console.error('Auth error:', err.response);
       setError(err.response?.data?.msg || 'Something went wrong');
+      toast.error(err.response?.data?.msg || 'Authentication failed');
     } finally {
       setSubmitLoading(false);
     }
