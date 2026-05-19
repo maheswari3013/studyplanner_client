@@ -208,8 +208,8 @@
 }
 
 .btn-missed {
-  background: white;
-  color: #64748b;
+  background: red;
+  color: white;
   border: 2px solid #e2e8f0;
 }
 
