@@ -21,7 +21,6 @@ const validatePassword = (password) => {
 
 export default function Profile() {
   const { user, logout, updateUser } = useContext(AuthContext);
-  const [stats, setStats] = useState({ total: 0, completed: 0, completionRate: 0 });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -61,19 +60,6 @@ export default function Profile() {
       alert('Export failed');
     } finally {
       setExporting(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) fetchStats();
-  }, [user]);
-
-  const fetchStats = async () => {
-    try {
-      const res = await API.get('/schedule/stats');
-      setStats(res.data);
-    } catch (err) {
-      console.error('Failed to fetch stats:', err);
     }
   };
 
@@ -186,24 +172,6 @@ export default function Profile() {
           <div>
             <h3>{user.name}</h3>
             <p className="profile-email">{user.email}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="stats-card">
-        <h3>Your Stats</h3>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <span className="stat-value">{stats.total}</span>
-            <span className="stat-label">Total Blocks</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">{stats.completed}</span>
-            <span className="stat-label">Completed</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">{stats.completionRate}%</span>
-            <span className="stat-label">Completion</span>
           </div>
         </div>
       </div>

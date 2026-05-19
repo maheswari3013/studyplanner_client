@@ -244,11 +244,16 @@
   justify-content: center;
   margin: 0 auto;
   transition: transform 0.3s;
+  background: conic-gradient(var(--ring-color) calc(var(--percent) * 3.6deg), #e5e7eb 0deg);
 }
 
 .dash-ring:hover {
   transform: scale(1.1);
 }
+
+.dash-ring.ring-high { --ring-color: #10b981; }
+.dash-ring.ring-mid { --ring-color: #f59e0b; }
+.dash-ring.ring-low { --ring-color: #ef4444; }
 
 .dash-ring-inner {
   width: 85px;
@@ -704,15 +709,4 @@
   .dash-title {
     font-size: 28px;
   }
-}
-.dash-progress-fill-mini {
-  width: var(--progress-width, 0%);
-}
-
-.dash-ring {
-  background: conic-gradient(var(--ring-color) calc(var(--percent, 0) * 3.6deg), #e5e7eb 0deg);
-}
-
-.dash-bar-fill {
-  width: var(--progress-width, 0%);
 }

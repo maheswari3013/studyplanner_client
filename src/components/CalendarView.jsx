@@ -96,57 +96,63 @@ export default function CalendarView() {
     }
   };
 
-  const downloadWeeklyPDF = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${baseURL}/schedule/export/pdf`, {
-        headers: { 'x-auth-token': token }
-      });
+ const downloadWeeklyPDF = async () => {
+  try {
+    toast.loading('Generating PDF...');
+    const start = new Date();
+    const end = new Date();
+    end.setDate(start.getDate() + 7);
+    
+    const res = await API.get('/schedule/export/pdf', {
+      params: { 
+        start: start.toISOString(), 
+        end: end.toISOString() 
+      },
+      responseType: 'blob' // ← Axios handles auth automatically
+    });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.msg || 'Failed to download PDF');
-      }
+    const blob = new Blob([res.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `study-schedule-${new Date().toISOString().split('T')[0]}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast.dismiss();
+    toast.success('PDF downloaded');
+  } catch (err) {
+    toast.dismiss();
+    console.error('PDF error:', err);
+    toast.error(err.response?.data?.msg || 'Failed to download PDF');
+  }
+};
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `study-schedule-${new Date().toISOString().split('T')[0]}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      toast.success('PDF downloaded');
-    } catch (err) {
-      toast.error(err.message || 'Failed to download PDF');
-    }
-  };
-
-  const exportPDF = async () => {
-    if (!pdfStart || !pdfEnd) return toast.error('Select start and end dates');
-    setExporting(true);
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${baseURL}/schedule/export/pdf?start=${pdfStart}&end=${pdfEnd}`, {
-        headers: { 'x-auth-token': token }
-      });
-      if (!res.ok) throw new Error('Failed');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `study-schedule-${pdfStart}-to-${pdfEnd}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      setShowPdfModal(false);
-      toast.success('PDF exported');
-    } catch (err) {
-      toast.error('PDF export failed');
-    } finally {
-      setExporting(false);
-    }
-  };
+const exportPDF = async () => {
+  if (!pdfStart || !pdfEnd) return toast.error('Select start and end dates');
+  setExporting(true);
+  try {
+    const res = await API.get('/schedule/export/pdf', {
+      params: { start: pdfStart, end: pdfEnd },
+      responseType: 'blob'
+    });
+    
+    const blob = new Blob([res.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `study-schedule-${pdfStart}-to-${pdfEnd}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    setShowPdfModal(false);
+    toast.success('PDF exported');
+  } catch (err) {
+    toast.error('PDF export failed');
+  } finally {
+    setExporting(false);
+  }
+};
 
   const exportICS = () => {
     const icsContent = [

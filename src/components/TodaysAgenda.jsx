@@ -103,15 +103,49 @@ export default function TodaysAgenda() {
     }
   };
 
+  // FIXED: Now actually works - fetches exams + generates
   const generateSchedule = async () => {
+    const confirm = window.confirm(
+      'This will delete your current schedule and regenerate from your saved exams. Continue?'
+    );
+    if (!confirm) return;
+
     setGenerating(true);
     try {
-      const body = startDate? { startDate } : {};
-      const res = await API.post('/schedule/generate', body);
+      // 1. Get existing exams
+      const examsRes = await API.get('/schedule/exams');
+      const exams = examsRes.data;
+
+      if (!exams.length) {
+        toast.error('No exams found. Create an exam first in Onboarding.');
+        setGenerating(false);
+        setShowDateModal(false);
+        return;
+      }
+
+      // 2. Clear old blocks
+      await API.delete('/schedule/clear-all');
+
+      // 3. Build config
+      const config = {
+        startDate: startDate? new Date(startDate) : new Date(),
+        startHour: 9,
+        endHour: 18,
+        studyBlock: 50,
+        breakBlock: 10
+      };
+
+      // 4. Generate new schedule
+      const res = await API.post('/schedule/generate', { exams, config });
+
       toast.success(`Generated ${res.data.count} study blocks`);
       setShowDateModal(false);
       setStartDate('');
       await fetchToday();
+
+      if (res.data.warnings?.length) {
+        toast(res.data.warnings.join(', '), { icon: '⚠️' });
+      }
     } catch (err) {
       console.error('Generate failed:', err);
       toast.error(err.response?.data?.msg || 'Failed to generate schedule');
@@ -142,6 +176,7 @@ export default function TodaysAgenda() {
         <div className="modal-backdrop">
           <div className="modal">
             <h3>When should we start?</h3>
+            <p className="modal-subtitle">This will delete all existing blocks and regenerate.</p>
             <input
               type="date"
               value={startDate}

@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Calendar, BookOpen, User, LogOut, ListTodo, Zap, BarChart3, Shield } from 'lucide-react'; // ← Added Shield
+import { LayoutDashboard, Calendar, BookOpen, User, LogOut, ListTodo, Zap, Shield } from 'lucide-react';
 import '../assets/Header.css';
 
 export default function Header() {
@@ -17,12 +17,10 @@ export default function Header() {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#6366f1' },
     { path: '/agenda', label: 'Today\'s Agenda', icon: ListTodo, color: '#8b5cf6' },
-    { path: '/analytics', label: 'Analytics', icon: BarChart3, color: '#10b981' },
     { path: '/calendar', label: 'Calendar', icon: Calendar, color: '#ec4899' },
     { path: '/exams', label: 'Exams', icon: BookOpen, color: '#f59e0b' },
     { path: '/profile', label: 'Profile', icon: User, color: '#06b6d4' },
-    // Only show Admin tab if user.role === 'admin'
-    ...(user?.role === 'admin' ? [
+  ...(user?.isAdmin? [
       { path: '/admin', label: 'Admin', icon: Shield, color: '#dc2626' }
     ] : [])
   ];
@@ -45,7 +43,7 @@ export default function Header() {
               key={path}
               to={path}
               title={label}
-              className={`nav-link-pro ${location.pathname === path ? 'active' : ''}`}
+              className={`nav-link-pro ${location.pathname === path? 'active' : ''}`}
               style={{ '--accent': color }}
             >
               <Icon size={18} />
@@ -60,7 +58,7 @@ export default function Header() {
           </div>
           <div className="user-info">
             <span className="nav-username">{user.name}</span>
-            <span className="nav-role">{user.role === 'admin' ? 'Admin' : 'Student'}</span> {/* ← Updated this */}
+            <span className="nav-role">{user.isAdmin? 'Admin' : 'Student'}</span>
           </div>
           <button onClick={handleLogout} className="btn-logout-pro" title="Logout">
             <LogOut size={18} />

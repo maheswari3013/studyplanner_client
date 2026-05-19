@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import API from '../api/axios'; 
+import API from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -8,6 +8,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import '../assets/Dashboard.css';
 
 const COLORS = ['#667eea', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'];
+const HEAVY_WEEK_THRESHOLD = 20; // Hours per week to trigger affirmations
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -37,7 +38,15 @@ export default function Dashboard() {
         API.get('/schedule/affirmation')
       ]);
       setExams(examsRes.data);
-      setStats(statsRes.data);
+     const s = statsRes.data;
+setStats({
+  total: s.total ?? s.totalScheduled ?? 0,
+  completed: s.completed ?? s.totalCompleted ?? 0,
+  missed: s.missed ?? 0,
+  remaining: s.remaining ?? 0,
+  completionRate: s.completionRate ?? 0,
+  bySubject: s.bySubject ?? []
+});
       setBlocks(blocksRes.data);
       setProgressData(progressRes.data);
       setReadiness(readinessRes.data);
@@ -145,15 +154,15 @@ export default function Dashboard() {
     ].filter(d => d.value > 0);
   };
 
-  const getSubjectBarData = () => {
-    if (!stats?.bySubject) return [];
-    return stats.bySubject.map(s => ({
-      subject: s._id,
-      completed: s.completed,
-      total: s.total,
-      percentage: Math.round((s.completed / s.total) * 100)
-    }));
-  };
+const getSubjectBarData = () => {
+  if (!Array.isArray(stats?.bySubject)) return [];
+  return stats.bySubject.map(s => ({
+    subject: s._id,
+    completed: s.completed,
+    total: s.total,
+    percentage: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0
+  }));
+};
 
   const getDailyHoursData = () => {
     const dailyMap = {};
@@ -165,10 +174,22 @@ export default function Dashboard() {
     });
 
     return Object.values(dailyMap)
-    .sort((a, b) => new Date(a.date) - new Date(b.date))
-    .slice(-7)
-    .map(d => ({...d, hours: Number(d.hours.toFixed(1)) }));
+   .sort((a, b) => new Date(a.date) - new Date(b.date))
+   .slice(-7)
+   .map(d => ({...d, hours: Number(d.hours.toFixed(1)) }));
   };
+
+  const getCurrentWeekHours = () => {
+    const now = new Date();
+    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+    weekStart.setHours(0,0,0,0);
+
+    return blocks
+     .filter(b =>!b.isBreak && new Date(b.date) >= weekStart)
+     .reduce((sum, b) => sum + b.duration / 60, 0);
+  };
+
+  const isHeavyWeek = getCurrentWeekHours() >= HEAVY_WEEK_THRESHOLD;
 
   const getRingColorClass = (pct) => pct >= 80? 'ring-high' : pct >= 50? 'ring-mid' : 'ring-low';
   const getScoreClass = (readiness) => readiness >= 70? 'high' : readiness >= 40? 'mid' : 'low';
@@ -181,6 +202,7 @@ export default function Dashboard() {
       </div>
     </div>
   );
+  if (!stats) return null;
 
   const hasData = stats && stats.total > 0;
 
@@ -188,7 +210,7 @@ export default function Dashboard() {
     <div className="dash-container">
       <Toaster position="top-right" />
 
-      {affirmation && (
+      {affirmation && isHeavyWeek && (
         <div className="dash-affirmation">
           <Sparkles size={24} />
           <p className="dash-quote">"{affirmation}"</p>
@@ -221,7 +243,7 @@ export default function Dashboard() {
                     <div className="dash-exam-meta">
                       <BookOpen size={14} />
                       {Array.isArray(exam.syllabusTopics)
-                      ? exam.syllabusTopics.map(t => typeof t === 'string'? t : t.name).join(', ')
+                     ? exam.syllabusTopics.map(t => typeof t === 'string'? t : t.name).join(', ')
                         : ''}
                     </div>
                     {exam.totalScheduledHours && (
@@ -229,7 +251,7 @@ export default function Dashboard() {
                         <div className="dash-progress-bar-mini">
                           <div
                             className="dash-progress-fill-mini"
-                            data-progress={Math.round((exam.completedHours / exam.totalScheduledHours) * 100)}
+                            style={{ width: `${Math.round((exam.completedHours / exam.totalScheduledHours) * 100)}%` }}
                           ></div>
                         </div>
                         <span>{exam.completedHours || 0}h / {exam.totalScheduledHours}h</span>
@@ -304,18 +326,18 @@ export default function Dashboard() {
             <div className="dash-section">
               <h3 className="dash-section-title">
                 <TrendingUp size={20} />
-                Subject Progress
+                Subject Progress Rings
               </h3>
               <div className="dash-rings-grid">
                 {progressData.map(p => (
                   <div key={p.subject} className="dash-ring-item">
-                    <div className={`dash-ring ${getRingColorClass(p.percentComplete)}`} data-percent={p.percentComplete}>
+                    <div className={`dash-ring ${getRingColorClass(p.percentComplete)}`} style={{ '--percent': `${p.percentComplete}%` }}>
                       <div className="dash-ring-inner">
                         <span className="dash-percent">{p.percentComplete}%</span>
                       </div>
                     </div>
                     <p className="dash-ring-label">{p.subject}</p>
-                    <p className="dash-ring-sub">{p.hoursCompleted}/{p.hoursPlanned}h planned</p>
+                    <p className="dash-ring-sub">Planned: {p.hoursPlanned}h</p>
                     <p className="dash-ring-sub actual">Actual: {p.hoursActual}h</p>
                   </div>
                 ))}
@@ -327,7 +349,7 @@ export default function Dashboard() {
             <div className="dash-section">
               <h3 className="dash-section-title">
                 <Target size={20} />
-                Exam Readiness
+                Confidence Tracker & Readiness Score
               </h3>
               {readiness.map(r => (
                 <div key={r.subject} className="dash-readiness-card">
@@ -338,7 +360,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <div className="dash-readiness-bar">
-                    <div className="dash-bar-fill" data-progress={r.readiness}></div>
+                    <div className="dash-bar-fill" style={{ width: `${r.readiness}%` }}></div>
                   </div>
                   <div className="dash-confidence-slider">
                     <label>Confidence: {r.confidence}/10</label>
@@ -422,7 +444,7 @@ export default function Dashboard() {
           </div>
 
           <div className="dash-subject-chart">
-            <h3 className="dash-chart-title">Progress By Subject</h3>
+            <h3 className="dash-chart-title">Study Log History - Planned vs Actual</h3>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={getSubjectBarData()} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
