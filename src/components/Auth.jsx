@@ -63,7 +63,7 @@ const Auth = () => {
        ? await userApi.login({ email, password })
         : await userApi.register({ name, email, password });
       setAuthData(res.data.token, res.data.user);
-      if (isLogin) await subscribeUser(res.data.token);
+      if (isLogin) subscribeUser(res.data.token).catch(()=>{});
       navigate('/agenda');
     } catch (err) {
       setError(err.response?.data?.msg || 'Something went wrong');
