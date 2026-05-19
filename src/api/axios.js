@@ -7,9 +7,6 @@ const API = axios.create({
 
 // ADD THIS BLOCK - it will tell you exactly what's calling /api
 API.interceptors.request.use((config) => {
-  if (config.url === '/' || config.url === '') {
-    console.trace('FOUND THE 404 CALLER:'); // This prints the full stack trace
-  }
   
   const token = localStorage.getItem('token');
   if (token) {
