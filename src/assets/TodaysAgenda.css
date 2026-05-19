@@ -215,6 +215,15 @@
   align-items: center;
   gap: 0.5rem;
 }
+.block-card.break {
+  border-left: 4px solid #10B981;
+  opacity: 0.7;
+  background: #f0fdf4;
+}
+
+.block-card.break .block-actions {
+  display: none; /* Hide buttons on breaks */
+}
 .btn-pending:hover { background: #4b5563; }
 
 .makeup-badge {
