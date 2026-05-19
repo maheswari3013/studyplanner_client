@@ -96,63 +96,63 @@ export default function CalendarView() {
     }
   };
 
- const downloadWeeklyPDF = async () => {
-  try {
-    toast.loading('Generating PDF...');
-    const start = new Date();
-    const end = new Date();
-    end.setDate(start.getDate() + 7);
-    
-    const res = await API.get('/schedule/export/pdf', {
-      params: { 
-        start: start.toISOString(), 
-        end: end.toISOString() 
-      },
-      responseType: 'blob' // ← Axios handles auth automatically
-    });
+  const downloadWeeklyPDF = async () => {
+    try {
+      toast.loading('Generating PDF...');
+      const start = new Date();
+      const end = new Date();
+      end.setDate(start.getDate() + 7);
 
-    const blob = new Blob([res.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `study-schedule-${new Date().toISOString().split('T')[0]}.pdf`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    
-    toast.dismiss();
-    toast.success('PDF downloaded');
-  } catch (err) {
-    toast.dismiss();
-    console.error('PDF error:', err);
-    toast.error(err.response?.data?.msg || 'Failed to download PDF');
-  }
-};
+      const res = await API.get('/schedule/export/pdf', {
+        params: {
+          start: start.toISOString().split('T')[0], // FIXED: Send YYYY-MM-DD
+          end: end.toISOString().split('T')[0] // FIXED: Send YYYY-MM-DD
+        },
+        responseType: 'blob'
+      });
 
-const exportPDF = async () => {
-  if (!pdfStart || !pdfEnd) return toast.error('Select start and end dates');
-  setExporting(true);
-  try {
-    const res = await API.get('/schedule/export/pdf', {
-      params: { start: pdfStart, end: pdfEnd },
-      responseType: 'blob'
-    });
-    
-    const blob = new Blob([res.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `study-schedule-${pdfStart}-to-${pdfEnd}.pdf`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    
-    setShowPdfModal(false);
-    toast.success('PDF exported');
-  } catch (err) {
-    toast.error('PDF export failed');
-  } finally {
-    setExporting(false);
-  }
-};
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `study-schedule-${new Date().toISOString().split('T')[0]}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.dismiss();
+      toast.success('PDF downloaded');
+    } catch (err) {
+      toast.dismiss();
+      console.error('PDF error:', err);
+      toast.error(err.response?.data?.msg || 'Failed to download PDF');
+    }
+  };
+
+  const exportPDF = async () => {
+    if (!pdfStart || !pdfEnd) return toast.error('Select start and end dates');
+    setExporting(true);
+    try {
+      const res = await API.get('/schedule/export/pdf', {
+        params: { start: pdfStart, end: pdfEnd },
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `study-schedule-${pdfStart}-to-${pdfEnd}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      setShowPdfModal(false);
+      toast.success('PDF exported');
+    } catch (err) {
+      toast.error('PDF export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const exportICS = () => {
     const icsContent = [
@@ -171,10 +171,7 @@ const exportPDF = async () => {
     }
 
     activeBlocks.forEach(block => {
-      const start = new Date(block.date);
-      const [hours, minutes] = block.startTime.split(':');
-      start.setHours(parseInt(hours), parseInt(minutes));
-
+      const start = new Date(`${block.date}T${block.time}:00`);
       const end = new Date(start);
       end.setMinutes(end.getMinutes() + block.duration);
 
@@ -264,7 +261,7 @@ const exportPDF = async () => {
   };
 
   const getBlocksForDay = (date) => {
-    // FIXED: Use local date instead of UTC
+    // Use local date to match string format "YYYY-MM-DD"
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -275,19 +272,22 @@ const exportPDF = async () => {
       return blockDate === dateStr;
     });
 
+    // FIXED: Handle both string and Date exam dates
     const dayExams = exams
-      .filter(e => {
-        const examDate = (e.examDate || e.date)?.split('T')[0];
+     .filter(e => {
+        const examDate = typeof e.examDate === 'string'
+         ? e.examDate.split('T')[0]
+          : new Date(e.examDate).toISOString().split('T')[0];
         return examDate === dateStr;
       })
-      .map(e => ({
+     .map(e => ({
         _id: e._id,
         subject: e.subject,
         topic: e.syllabus || 'EXAM',
         startTime: e.time || '09:00',
         duration: 0,
         type: 'Exam',
-        date: e.examDate || e.date,
+        date: e.examDate,
         isExam: true,
         location: e.location,
         color: e.color || '#dc2626'

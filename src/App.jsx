@@ -8,12 +8,11 @@ import TodaysAgenda from './components/TodaysAgenda';
 
 // Lazy load everything else
 const CalendarView = lazy(() => import('./components/CalendarView'));
-const Profile = lazy(() => import('./components/Profile'));
+const Profile = lazy(() => import('./components/Profile.andSettingsjsx'));
 const PlanSetup = lazy(() => import('./components/PlanSetup'));
 const Exams = lazy(() => import('./pages/Exams'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const FocusModeWrapper = lazy(() => import('./pages/FocusModeWrapper'));
-const Settings = lazy(() => import('./pages/Settings'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -49,7 +48,6 @@ function App() {
             <Route path="/focus" element={user? <FocusModeWrapper /> : <Navigate to="/auth" />} />
             <Route path="/profile" element={user? <Profile /> : <Navigate to="/auth" />} />
             <Route path="/exams" element={user? <Exams /> : <Navigate to="/auth" />} />
-            <Route path="/settings" element={user? <Settings /> : <Navigate to="/auth" />} />
 
             <Route path="/admin" element={
               <AdminRoute>
