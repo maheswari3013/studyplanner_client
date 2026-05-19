@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userApi } from '../api/userApi';
+import API from '../api/axios'; // Import your axios instance
 import '../assets/Auth.css';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const VAPID_PUBLIC_KEY = 'BOHFuuYR-Esh5cxDIUQKh_Vqmvx5xMo70osWEiEZKmbJGQvKegSio0oGQMUbZuAypHhkp6JcZ5HlBu0A2sShFgs'; 
+const VAPID_PUBLIC_KEY = 'BOHFuuYR-Esh5cxDIUQKh_Vqmvx5xMo70osWEiEZKmbJGQvKegSio0oGQMUbZuAypHhkp6JcZ5HlBu0A2sShFgs';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -34,7 +35,7 @@ const Auth = () => {
   }
 
   // Subscribe user to push notifications
-  const subscribeUser = async (token) => {
+  const subscribeUser = async () => {
     try {
       if (!('serviceWorker' in navigator) ||!('PushManager' in window)) {
         console.log('Push notifications not supported');
@@ -55,19 +56,14 @@ const Auth = () => {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
 
-      await fetch('https://studyplanner-api-aumb.onrender.com/api/notifications/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(subscription)
-      });
+      // Use axios instead of fetch - token is added automatically by interceptor
+      await API.post('/notifications/subscribe', subscription);
 
       console.log('Push subscription saved');
       toast.success('Notifications enabled');
     } catch (err) {
       console.error('Push subscription failed:', err);
+      toast.error('Could not enable notifications');
     }
   };
 
@@ -75,21 +71,21 @@ const Auth = () => {
     e.preventDefault();
     setError('');
     setSubmitLoading(true);
-    
+
     try {
       const res = isLogin
-       ? await userApi.login({ email, password })
+      ? await userApi.login({ email, password })
         : await userApi.register({ name, email, password });
 
       console.log('Login response:', res.data);
-      
+
       setAuthData(res.data.token, res.data.user);
-      
+
       // Subscribe to push notifications after login
       if (isLogin) {
-        await subscribeUser(res.data.token);
+        await subscribeUser(); // No need to pass token, axios interceptor handles it
       }
-      
+
       navigate('/agenda');
 
     } catch (err) {
