@@ -5,8 +5,12 @@ const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL
 });
 
-// Request interceptor - adds token to every request
+// ADD THIS BLOCK - it will tell you exactly what's calling /api
 API.interceptors.request.use((config) => {
+  if (config.url === '/' || config.url === '') {
+    console.trace('FOUND THE 404 CALLER:'); // This prints the full stack trace
+  }
+  
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
