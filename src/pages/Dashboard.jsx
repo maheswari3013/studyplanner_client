@@ -102,7 +102,7 @@ export default function Dashboard() {
   const handleDeleteExam = async (examId, subject) => {
     if (!window.confirm(`Delete ${subject} exam? This will also delete all its study blocks.`)) return;
     try {
-      await API.delete(`/schedule/exams/${examId}`);
+      await API.delete(`/exams/${examId}`);
       await fetchData();
       toast.success('Exam deleted');
     } catch (err) {
