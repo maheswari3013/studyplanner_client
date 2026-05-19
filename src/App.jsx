@@ -1,12 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useContext, lazy, Suspense } from 'react';
+import { useContext, lazy, Suspense, useEffect } from 'react';
 import { AuthContext } from './context/AuthContext';
 import { useAuth } from './context/AuthContext';
 import Header from './components/Header';
 import Auth from './components/Auth';
 import TodaysAgenda from './components/TodaysAgenda';
 
-// Lazy load everything else
 const CalendarView = lazy(() => import('./components/CalendarView'));
 const Profile = lazy(() => import('./components/ProfileandSettings.jsx'));
 const PlanSetup = lazy(() => import('./components/PlanSetup'));
@@ -15,6 +14,18 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const FocusModeWrapper = lazy(() => import('./pages/FocusModeWrapper'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Helper to convert VAPID key
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 function AdminRoute({ children }) {
   const { user } = useAuth();
@@ -25,6 +36,57 @@ function AdminRoute({ children }) {
 
 function App() {
   const { user } = useContext(AuthContext);
+
+  // Push notification subscription
+  useEffect(() => {
+    if (!user) return; // Only subscribe logged-in users
+
+    const subscribeToPush = async () => {
+      if (!('serviceWorker' in navigator) ||!('PushManager' in window)) {
+        console.log('Push notifications not supported');
+        return;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission!== 'granted') {
+          console.log('Notification permission denied');
+          return;
+        }
+
+        const registration = await navigator.serviceWorker.ready;
+        
+        // Check existing subscription first
+        let subscription = await registration.pushManager.getSubscription();
+        
+        if (!subscription) {
+          const vapidPublicKey = import.meta.env.BOHFuuYR-Esh5cxDIUQKh_Vqmvx5xMo70osWEiEZKmbJGQvKegSio0oGQMUbZuAypHhkp6JcZ5HlBu0A2sShFgs; 
+          const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+          
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+          });
+        }
+
+        // Send subscription to backend - update endpoint as needed
+        await fetch('/api/notifications/subscribe', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}` // if you use auth
+          },
+          body: JSON.stringify(subscription)
+        });
+        
+        console.log('Push subscription successful');
+      } catch (error) {
+        console.error('Push subscription failed:', error);
+      }
+    };
+
+    subscribeToPush();
+  }, [user]); // Re-run when user logs in
 
   const LoadingFallback = () => (
     <div style={{ textAlign: 'center', marginTop: '50px' }}>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import StudyTimer from '../components/StudyTimer';
-import { Maximize2 } from 'lucide-react';
+import { Maximize2, ClockIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import '../assets/TodaysAgenda.css';
 
@@ -11,7 +11,7 @@ export default function TodaysAgenda() {
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingBlock, setEditingBlock] = useState(null);
-  const [editForm, setEditForm] = useState({ subject: '', topic: '', duration: '', date: '' });
+  const [editForm, setEditForm] = useState({ subject: '', topic: '', duration: '', date: '', time: '' });
   const [showDateModal, setShowDateModal] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -20,7 +20,7 @@ export default function TodaysAgenda() {
   const fetchToday = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/schedule/today');
+      const res = await API.get('/schedule/pending'); // FIX 1: Use /pending
       setBlocks(res.data);
     } catch (err) {
       console.error('Failed to fetch today:', err);
@@ -36,8 +36,8 @@ export default function TodaysAgenda() {
 
   const markComplete = async (id) => {
     try {
-      setBlocks(prev => prev.map(b => b._id === id? {...b, completed: true} : b));
-      await API.patch(`/schedule/${id}/complete`);
+      setBlocks(prev => prev.map(b => b._id === id? {...b, status: 'completed'} : b));
+      await API.patch(`/schedule/blocks/${id}/complete`); // FIX 3: Add /blocks/
       setActiveTimerBlock(null);
       toast.success('Marked as complete!');
     } catch (err) {
@@ -48,12 +48,24 @@ export default function TodaysAgenda() {
 
   const markMissed = async (id) => {
     try {
-      setBlocks(prev => prev.map(b => b._id === id? {...b, missed: true} : b));
-      await API.patch(`/schedule/${id}/missed`, {});
+      setBlocks(prev => prev.map(b => b._id === id? {...b, status: 'missed'} : b));
+      const res = await API.patch(`/schedule/blocks/${id}/missed`); // FIX 3: Add /blocks/
       setActiveTimerBlock(null);
-      toast.success('Marked as missed. Schedule updated.');
+      toast.success(res.data.msg); // Backend sends "Makeup block scheduled at 15:30"
+      setTimeout(fetchToday, 1000); // Refresh to show makeup block
     } catch (err) {
-      toast.error('Failed to mark missed');
+      toast.error(err.response?.data?.msg || 'Failed to mark missed');
+      fetchToday();
+    }
+  };
+
+  const markPending = async (id) => {
+    try {
+      setBlocks(prev => prev.map(b => b._id === id? {...b, status: 'pending'} : b));
+      await API.patch(`/schedule/blocks/${id}/pending`); // FIX 3: Add /blocks/
+      toast.success('Reset to pending');
+    } catch (err) {
+      toast.error('Failed to reset');
       fetchToday();
     }
   };
@@ -87,7 +99,8 @@ export default function TodaysAgenda() {
       subject: block.subject,
       topic: block.topic,
       duration: block.duration,
-      date: block.date.split('T')[0]
+      date: block.date.split('T')[0],
+      time: block.time || '' // Use time, not startTime
     });
   };
 
@@ -103,7 +116,6 @@ export default function TodaysAgenda() {
     }
   };
 
-  // FIXED: Now actually works - fetches exams + generates
   const generateSchedule = async () => {
     const confirm = window.confirm(
       'This will delete your current schedule and regenerate from your saved exams. Continue?'
@@ -112,21 +124,18 @@ export default function TodaysAgenda() {
 
     setGenerating(true);
     try {
-      // 1. Get existing exams
-      const examsRes = await API.get('/schedule/exams');
+      const examsRes = await API.get('/exams');
       const exams = examsRes.data;
 
       if (!exams.length) {
-        toast.error('No exams found. Create an exam first in Onboarding.');
+        toast.error('No exams found. Create an exam first.');
         setGenerating(false);
         setShowDateModal(false);
         return;
       }
 
-      // 2. Clear old blocks
       await API.delete('/schedule/clear-all');
 
-      // 3. Build config
       const config = {
         startDate: startDate? new Date(startDate) : new Date(),
         startHour: 9,
@@ -135,7 +144,6 @@ export default function TodaysAgenda() {
         breakBlock: 10
       };
 
-      // 4. Generate new schedule
       const res = await API.post('/schedule/generate', { exams, config });
 
       toast.success(`Generated ${res.data.count} study blocks`);
@@ -203,8 +211,8 @@ export default function TodaysAgenda() {
 
       {blocks.map(block => {
         let cardClass = 'block-card';
-        if (block.completed) cardClass += ' completed';
-        if (block.missed) cardClass += ' missed';
+        if (block.status === 'completed') cardClass += ' completed';
+        if (block.status === 'missed') cardClass += ' missed';
 
         return (
           <div key={block._id} className={cardClass}>
@@ -214,8 +222,11 @@ export default function TodaysAgenda() {
                 <p className="block-meta">
                   <span><b>Type:</b> {block.type}</span>
                   <span><b>Duration:</b> {block.duration} min</span>
-                  <span><b>Time:</b> {block.startTime}</span>
+                  <span><b>Time:</b> {block.time}</span> {/* FIX 2: Use block.time string */}
                 </p>
+                {block.rescheduledFrom && (
+                  <span className="makeup-badge">Makeup Session</span>
+                )}
               </div>
               <div className="block-card-controls">
                 <button className="edit-btn" onClick={() => openEditModal(block)}>✎</button>
@@ -223,34 +234,51 @@ export default function TodaysAgenda() {
               </div>
             </div>
 
-            {!block.completed &&!block.missed && (
-              <div className="block-actions">
-                {!block.isBreak && (
-                  <>
-                    <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
-                      ▶ Start Timer
-                    </button>
-                    <button
-                      onClick={() => navigate('/focus', { state: { block } })}
-                      className="btn-focus"
-                    >
-                      <Maximize2 size={16} /> Focus
-                    </button>
-                  </>
-                )}
-                <button onClick={() => markComplete(block._id)} className="btn-complete">
-                  ✓ Complete
-                </button>
-                {!block.isBreak && (
-                  <button onClick={() => markMissed(block._id)} className="btn-missed">
-                    X Missed
+            <div className="block-actions">
+              {block.status === 'pending' && (
+                <>
+                  {!block.isBreak && (
+                    <>
+                      <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
+                        ▶ Start Timer
+                      </button>
+                      <button
+                        onClick={() => navigate('/focus', { state: { block } })}
+                        className="btn-focus"
+                      >
+                        <Maximize2 size={16} /> Focus
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => markComplete(block._id)} className="btn-complete">
+                    ✓ Complete
                   </button>
-                )}
-              </div>
-            )}
+                  {!block.isBreak && (
+                    <button onClick={() => markMissed(block._id)} className="btn-missed">
+                      X Missed
+                    </button>
+                  )}
+                </>
+              )}
 
-            {block.completed && <span className="status-badge completed">✓ Completed</span>}
-            {block.missed && <span className="status-badge missed">✗ Missed</span>}
+              {block.status === 'completed' && (
+                <>
+                  <span className="status-badge completed">✓ Completed</span>
+                  <button onClick={() => markPending(block._id)} className="btn-pending">
+                    <ClockIcon size={16} /> Set Pending
+                  </button>
+                </>
+              )}
+
+              {block.status === 'missed' && (
+                <>
+                  <span className="status-badge missed">✗ Missed</span>
+                  <button onClick={() => markPending(block._id)} className="btn-pending">
+                    <ClockIcon size={16} /> Set Pending
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         );
       })}
@@ -283,6 +311,12 @@ export default function TodaysAgenda() {
                 type="date"
                 value={editForm.date}
                 onChange={e => setEditForm({...editForm, date: e.target.value})}
+                required
+              />
+              <input
+                type="time"
+                value={editForm.time}
+                onChange={e => setEditForm({...editForm, time: e.target.value})}
                 required
               />
               <div className="modal-actions">

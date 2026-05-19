@@ -2,10 +2,13 @@ import API from './axios';
 
 export const scheduleApi = {
   // Schedule CRUD
-  getSchedule: () => API.get('/schedule'),
+  getSchedule: () => API.get('/schedule'), // Keep for CalendarView full history
   createBlock: (data) => API.post('/schedule', data),
   updateBlock: (id, data) => API.patch(`/schedule/${id}`, data),
   deleteBlock: (id) => API.delete(`/schedule/${id}`),
+  
+  // AGENDA - Use this in TodaysAgenda.jsx
+  getAgenda: () => API.get('/schedule/pending'), // ✅ NEW - only pending + missed for today
   
   // Plan generation - used in PlanSetup.jsx
   generateSchedule: (params) => API.post('/schedule/generate', params),
@@ -14,7 +17,7 @@ export const scheduleApi = {
   logTime: (blockId, actualMinutes) => API.post('/schedule/log', { blockId, actualMinutes }),
   
   // Missed/reschedule - used in CalendarView.jsx
-  markMissed: (blockId) => API.patch(`/schedule/${blockId}/missed`),
+  markMissed: (blockId) => API.patch(`/schedule/${blockId}/missed`), // ✅ Correct
   rescheduleBlock: (blockId, newDate, newTime) => 
     API.patch(`/schedule/${blockId}/reschedule`, { newDate, newTime }),
   
@@ -26,7 +29,7 @@ export const scheduleApi = {
   // Stats & reports - used in Dashboard.jsx
   getStats: () => API.get('/schedule/stats'),
   getWeeklyReport: (weekStart) => API.get(`/schedule/report/weekly?start=${weekStart}`),
-  getTodayBlocks: () => API.get('/schedule/today')
+  getTodayBlocks: () => API.get('/schedule/pending') // ✅ Changed from /today to /pending
 };
 
 export default scheduleApi;

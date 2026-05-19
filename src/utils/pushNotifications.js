@@ -1,21 +1,38 @@
 import API from '../api/axios';
 
 export async function subscribeUser() {
-  if (!('serviceWorker' in navigator) ||!('PushManager' in window)) {
-    alert('Push notifications not supported');
-    return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('Push notifications not supported');
+    return null;
   }
 
-  const registration = await navigator.serviceWorker.ready;
-  const { data } = await API.get('/notifications/vapid-public-key');
+  // Check permission first
+  if (Notification.permission === 'denied') {
+    toast.error('Notifications blocked. Enable them in browser settings.');
+    return null;
+  }
 
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(data.publicKey)
-  });
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const { data } = await API.get('/notifications/vapid-public-key');
 
-  await API.post('/notifications/subscribe', subscription);
-  return subscription;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(data.publicKey)
+    });
+
+    await API.post('/notifications/subscribe', subscription);
+    toast.success('Notifications enabled');
+    return subscription;
+  } catch (err) {
+    console.error('Subscribe failed:', err);
+    if (err.name === 'NotAllowedError') {
+      toast.error('Please allow notifications to get reminders');
+    } else {
+      toast.error('Failed to enable notifications');
+    }
+    return null;
+  }
 }
 
 function urlBase64ToUint8Array(base64String) {

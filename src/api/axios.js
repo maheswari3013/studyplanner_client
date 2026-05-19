@@ -5,9 +5,10 @@ const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL
 });
 
-// ADD THIS BLOCK - it will tell you exactly what's calling /api
+// Debug: log baseURL once
+console.log('API Base URL:', import.meta.env.VITE_API_URL); // Remove after deploy works
+
 API.interceptors.request.use((config) => {
-  
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -15,7 +16,6 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor - handles 401 globally
 API.interceptors.response.use(
   (response) => response,
   (error) => {
