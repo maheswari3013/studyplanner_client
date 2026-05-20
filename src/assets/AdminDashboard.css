@@ -254,3 +254,16 @@
     padding: 8px;
   }
 }
+.status-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.status-ok { background: #10b981; color: white; }
+.status-error { background: #ef4444; color: white; }
+.stat-server { background: #6366f1; }
+.stat-cpu { background: #f59e0b; }
+.stat-memory { background: #8b5cf6; }
+.stat-blocks { background: #06b6d4; }
+.stat-errors { background: #ef4444; }
+.error-section { margin-top: 32px; }
+.error-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+.error-card { background: #1f2937; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444; }
+.error-count { font-size: 32px; font-weight: 700; color: #ef4444; margin: 8px 0; }
+.last-checked { color: #6b7280; font-size: 12px; margin-top: 16px; }

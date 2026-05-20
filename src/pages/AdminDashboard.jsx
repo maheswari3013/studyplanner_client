@@ -1,32 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, BookOpen, Clock, TrendingUp, Shield, Trash2, RefreshCw } from 'lucide-react';
+import { Activity, Users, Server, AlertTriangle, RefreshCw, Shield, Cpu, HardDrive } from 'lucide-react';
 import API from '../api/axios';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/AdminDashboard.css';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ totalUsers: 0, totalExams: 0, totalHours: 0, activeToday: 0 });
-  const [users, setUsers] = useState([]);
+  const [health, setHealth] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+  const [errors, setErrors] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchAdminData();
+    const interval = setInterval(fetchAdminData, 30000); // Auto-refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAdminData = async () => {
-    setLoading(true);
+    if (!loading) setRefreshing(true);
     setError(null);
     try {
-      const [statsRes, usersRes] = await Promise.all([
-        API.get('/admin/stats'),
-        API.get('/admin/users')
+      const [healthRes, metricsRes, errorsRes] = await Promise.all([
+        API.get('/admin/health'),
+        API.get('/admin/metrics'),
+        API.get('/admin/errors')
       ]);
-      setStats(statsRes.data);
-      setUsers(usersRes.data);
+      setHealth(healthRes.data);
+      setMetrics(metricsRes.data);
+      setErrors(errorsRes.data);
     } catch (err) {
       const msg = err.response?.data?.msg || 'Failed to load admin data';
       setError(msg);
@@ -38,35 +43,7 @@ export default function AdminDashboard() {
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchAdminData();
-    setRefreshing(false);
-    if (!error) toast.success('Data refreshed');
-  };
-
-  const handleDeleteUser = async (userId, name) => {
-    if (!window.confirm(`Delete user ${name} and all their data? This cannot be undone.`)) return;
-    try {
-      await API.delete(`/admin/users/${userId}`);
-      toast.success('User deleted');
-      fetchAdminData();
-    } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to delete user');
-    }
-  };
-
-  const handleResetUserData = async (userId, name) => {
-    if (!window.confirm(`Reset all study data for ${name}? User account will remain.`)) return;
-    try {
-      await API.post(`/admin/users/${userId}/reset`);
-      toast.success('User data reset');
-      fetchAdminData();
-    } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to reset data');
+      setRefreshing(false);
     }
   };
 
@@ -92,117 +69,104 @@ export default function AdminDashboard() {
       <div className="admin-header">
         <div className="admin-title-row">
           <Shield size={32} />
-          <h1 className="admin-title">Admin Dashboard</h1>
+          <h1 className="admin-title">System Monitor</h1>
+          <span className={`status-badge ${health?.status === 'ok' ? 'status-ok' : 'status-error'}`}>
+            {health?.status === 'ok' ? 'Online' : 'Degraded'}
+          </span>
         </div>
         <button 
-          onClick={handleRefresh} 
+          onClick={fetchAdminData} 
           className="btn-refresh"
           disabled={refreshing}
         >
-          <RefreshCw size={18} className={refreshing? 'spinning' : ''} />
+          <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
           Refresh
         </button>
       </div>
 
       <div className="stats-grid">
         <div className="stat-card">
+          <div className="stat-icon stat-server">
+            <Server size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">DB Status</p>
+            <p className="stat-value">{health?.db || 'unknown'}</p>
+            <p className="stat-sub">Uptime: {health?.uptime || 0}m</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon stat-cpu">
+            <Cpu size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">CPU Load</p>
+            <p className="stat-value">{health?.cpu || 0}</p>
+            <p className="stat-sub">Node {health?.nodeVersion}</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon stat-memory">
+            <HardDrive size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Memory</p>
+            <p className="stat-value">{health?.memory?.used || 0} MB</p>
+            <p className="stat-sub">Heap used</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
           <div className="stat-icon stat-users">
             <Users size={24} />
           </div>
           <div className="stat-content">
-            <p className="stat-label">Total Users</p>
-            <p className="stat-value">{stats.totalUsers}</p>
+            <p className="stat-label">Active Users</p>
+            <p className="stat-value">{metrics?.users?.active24h || 0}</p>
+            <p className="stat-sub">Last 24h / {metrics?.users?.total || 0} total</p>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon stat-exams">
-            <BookOpen size={24} />
+          <div className="stat-icon stat-blocks">
+            <Activity size={24} />
           </div>
           <div className="stat-content">
-            <p className="stat-label">Total Exams</p>
-            <p className="stat-value">{stats.totalExams}</p>
+            <p className="stat-label">Blocks Today</p>
+            <p className="stat-value">{metrics?.blocks?.completedToday || 0}</p>
+            <p className="stat-sub">{metrics?.blocks?.overdue || 0} overdue</p>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon stat-hours">
-            <Clock size={24} />
+          <div className="stat-icon stat-errors">
+            <AlertTriangle size={24} />
           </div>
           <div className="stat-content">
-            <p className="stat-label">Study Hours Logged</p>
-            <p className="stat-value">{stats.totalHours?.toFixed(1) || 0}h</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-active">
-            <TrendingUp size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Active Today</p>
-            <p className="stat-value">{stats.activeToday}</p>
+            <p className="stat-label">System Errors</p>
+            <p className="stat-value">{(errors?.cronFailures || 0) + (errors?.schedulerFailures || 0)}</p>
+            <p className="stat-sub">Cron: {errors?.cronFailures || 0} | Sched: {errors?.schedulerFailures || 0}</p>
           </div>
         </div>
       </div>
 
-      <div className="users-section">
-        <h2 className="section-title">User Management</h2>
-        
-        {users.length === 0? (
-          <div className="empty-state">No users found</div>
-        ) : (
-          <div className="users-table-wrapper">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Joined</th>
-                  <th>Exams</th>
-                  <th>Hours</th>
-                  <th>Last Active</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(user => (
-                  <tr key={user._id}>
-                    <td className="user-name">
-                      {user.name}
-                      {user.isAdmin && <span className="admin-badge">Admin</span>}
-                    </td>
-                    <td className="user-email">{user.email}</td>
-                    <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                    <td className="text-center">{user.examCount || 0}</td>
-                    <td className="text-center">{user.totalHours?.toFixed(1) || 0}h</td>
-                    <td>{user.lastActive? new Date(user.lastActive).toLocaleDateString() : 'Never'}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button
-                          onClick={() => handleResetUserData(user._id, user.name)}
-                          className="btn-action btn-reset"
-                          title="Reset user data"
-                          disabled={user.isAdmin}
-                        >
-                          Reset
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user._id, user.name)}
-                          className="btn-action btn-delete"
-                          title="Delete user"
-                          disabled={user.isAdmin}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="error-section">
+        <h2 className="section-title">Error Breakdown</h2>
+        <div className="error-grid">
+          <div className="error-card">
+            <h3>Cron Failures</h3>
+            <p className="error-count">{errors?.cronFailures || 0}</p>
+            <p className="error-desc">Overdue blocks not rescheduled &gt; 1h</p>
           </div>
-        )}
+          <div className="error-card">
+            <h3>Scheduler Failures</h3>
+            <p className="error-count">{errors?.schedulerFailures || 0}</p>
+            <p className="error-desc">Topics with 10h+ unscheduled</p>
+          </div>
+        </div>
+        <p className="last-checked">Last checked: {new Date(errors?.lastChecked).toLocaleTimeString()}</p>
       </div>
     </div>
   );
