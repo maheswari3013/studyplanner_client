@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import API from '../api/axios';
+import { examApi } from '../api/examApi';
+import { scheduleApi } from '../api/scheduleApi';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/exams.css';
 
@@ -11,7 +12,7 @@ const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
 };
 
-function SortableExamCard({ exam, idx, onDelete, onGenerateSingle }) {
+function SortableExamCard({ exam, idx, onDelete }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: exam._id });
 
   const style = {
@@ -109,7 +110,7 @@ export default function Exams() {
 
   const fetchExams = async () => {
     try {
-      const res = await API.get('/exams');
+      const res = await examApi.getExams();
       setExams(res.data);
     } catch (err) {
       toast.error('Failed to load exams');
@@ -129,7 +130,6 @@ export default function Exams() {
         const oldIndex = items.findIndex(item => item._id === active.id);
         const newIndex = items.findIndex(item => item._id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
-        // Update priority in DB
         updatePriorities(newItems);
         return newItems;
       });
@@ -139,7 +139,7 @@ export default function Exams() {
   const updatePriorities = async (newExams) => {
     try {
       await Promise.all(newExams.map((exam, idx) =>
-        API.put(`/exams/${exam._id}`, { priority: idx + 1 })
+        examApi.updateExam(exam._id, { priority: idx + 1 })
       ));
       toast.success('Priorities updated');
     } catch (err) {
@@ -198,7 +198,7 @@ export default function Exams() {
     };
 
     try {
-      await API.post('/exams', examData);
+      await examApi.createExam(examData);
       toast.success('Exam added');
       setShowForm(false);
       resetForm();
@@ -211,7 +211,7 @@ export default function Exams() {
   const handleDelete = async (id, subject) => {
     if (!window.confirm(`Delete ${subject} and all its study blocks?`)) return;
     try {
-      await API.delete(`/exams/${id}`);
+      await examApi.deleteExam(id);
       setExams(exams.filter(e => e._id!== id));
       toast.success('Exam deleted');
     } catch (err) {
@@ -224,7 +224,7 @@ export default function Exams() {
     setGenerating(true);
 
     try {
-      const res = await API.post('/schedule/generate', { exams, config });
+      const res = await scheduleApi.generateSchedule({ exams, config });
 
       if (!res.data.success) {
         res.data.conflicts?.forEach(c => {
