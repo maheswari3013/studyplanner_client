@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import StudyTimer from '../components/StudyTimer';
-import { Maximize2, ClockIcon } from 'lucide-react';
+import { Maximize2, ClockIcon, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
 import '../assets/TodaysAgenda.css';
 
@@ -20,7 +20,7 @@ export default function TodaysAgenda() {
   const fetchToday = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/schedule/today'); // FIX: Use /today not /pending
+      const res = await API.get('/schedule/today');
       setBlocks(res.data);
     } catch (err) {
       console.error('Failed to fetch today:', err);
@@ -34,6 +34,16 @@ export default function TodaysAgenda() {
     fetchToday();
   }, []);
 
+  // Check if block is overdue but not marked missed yet
+  const isOverdue = (block) => {
+    if (block.completed || block.missed || block.isBreak) return false;
+    const now = new Date();
+    const blockStart = new Date(`${block.date}T${block.time}:00+05:30`);
+    const blockEnd = new Date(blockStart);
+    blockEnd.setMinutes(blockEnd.getMinutes() + block.duration);
+    return now > blockEnd;
+  };
+
   const markComplete = async (id) => {
     try {
       setBlocks(prev => prev.map(b => b._id === id? {...b, completed: true, missed: false } : b));
@@ -46,18 +56,23 @@ export default function TodaysAgenda() {
     }
   };
 
+  // FIXED: Delete + Regenerate + Refetch
   const markMissed = async (id) => {
-    try {
-      setBlocks(prev => prev.map(b => b._id === id? {...b, missed: true, completed: false } : b));
-      const res = await API.patch(`/schedule/${id}/missed`);
-      setActiveTimerBlock(null);
-      toast.success(res.data.msg);
-      setTimeout(fetchToday, 1000);
-    } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to mark missed');
-      fetchToday();
-    }
-  };
+  try {
+    const res = await API.patch(`/schedule/${id}/missed`);
+    console.log('Missed response:', res.data); 
+    
+    setActiveTimerBlock(null);
+    toast.success(`Block deleted. Rescheduled ${res.data.newBlocksCreated} new blocks`);
+    
+    await fetchToday(); 
+    
+  } catch (err) {
+    console.error('Missed error:', err.response?.data);
+    toast.error(err.response?.data?.msg || 'Failed to mark missed');
+    await fetchToday(); 
+  }
+};
 
   const markPending = async (id) => {
     try {
@@ -67,6 +82,17 @@ export default function TodaysAgenda() {
     } catch (err) {
       toast.error('Failed to reset');
       fetchToday();
+    }
+  };
+
+  // NEW: Start Now - shift all future blocks
+  const handleStartNow = async (id) => {
+    try {
+      const res = await API.post(`/schedule/${id}/start`);
+      toast.success(res.data.msg);
+      await fetchToday(); // Refetch to show shifted times
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to start');
     }
   };
 
@@ -200,11 +226,12 @@ export default function TodaysAgenda() {
           const isBreak = block.isBreak || block.type === 'Break';
           const isCompleted = block.completed;
           const isMissed = block.missed;
-          const isPending =!isCompleted &&!isMissed;
+          const isPending = !isCompleted && !isMissed;
           const isStudyOrReview = block.type === 'Study' || block.type === 'Review';
+          const overdue = isOverdue(block);
 
           return (
-            <div key={block._id} className={`block-card ${isBreak? 'break' : ''} ${isCompleted? 'completed' : ''} ${isMissed? 'missed' : ''}`}>
+            <div key={block._id} className={`block-card ${isBreak? 'break' : ''} ${isCompleted? 'completed' : ''} ${isMissed? 'missed' : ''} ${overdue && !isMissed? 'overdue' : ''}`}>
               <div className="block-card-header">
                 <div className="block-card-content">
                   <h3>{block.subject} - {block.topic}</h3>
@@ -214,6 +241,7 @@ export default function TodaysAgenda() {
                     <span><b>Time:</b> {block.time}</span>
                   </p>
                   {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
+                  {overdue && !isMissed && <span className="overdue-badge">⚠️ Overdue</span>}
                 </div>
                 <div className="block-card-controls">
                   <button className="edit-btn" onClick={() => openEditModal(block)}>✎</button>
@@ -224,6 +252,9 @@ export default function TodaysAgenda() {
               <div className="block-actions">
                 {isPending && isStudyOrReview && (
                   <>
+                    <button onClick={() => handleStartNow(block._id)} className="btn-start-now">
+                      <Play size={16} /> Start Now
+                    </button>
                     <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
                       ▶ Start Timer
                     </button>
