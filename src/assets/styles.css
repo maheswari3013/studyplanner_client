@@ -110,3 +110,62 @@
     font-size: 24px;
   }
 }
+.topics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.hour-mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hour-mode-toggle button {
+  padding: 6px 12px;
+  background: white;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.hour-mode-toggle button.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.hour-mode-toggle button:not(:last-child) {
+  border-right: 1px solid #d1d5db;
+}
+
+.topic-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 40px; /* Fixed width for hours */
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.topic-row input[type="text"],
+.topic-row input[type="number"] {
+  min-width: 0; /* Prevents overflow */
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+.topic-row {
+    grid-template-columns: 1fr 80px 40px;
+  }
+.topics-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

@@ -20,7 +20,7 @@ function SortableExamCard({ exam, idx, onDelete }) {
     transition
   };
 
-  const totalHours = exam.syllabusTopics?.reduce((sum, t) => sum + (t.hours || 0), 0) || 0;
+  const totalHours = exam.syllabusTopics?.reduce((sum, t) => sum + (t.hours || 0), 0) || exam.totalHours || 0;
   const isPast = new Date(exam.examDate) < new Date();
 
   return (
@@ -68,7 +68,9 @@ function SortableExamCard({ exam, idx, onDelete }) {
           <p className="stat-label">Topics ({exam.syllabusTopics.length})</p>
           <div className="topics-list">
             {exam.syllabusTopics.map((t, i) => (
-              <span key={i} className="topic-tag">{t.name} ({t.hours}h)</span>
+              <span key={i} className="topic-tag">
+                {t.name} {t.hours? `(${t.hours}h)` : ''}
+              </span>
             ))}
           </div>
         </div>
@@ -84,7 +86,6 @@ export default function Exams() {
   const [showForm, setShowForm] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  // Form state
   const [subject, setSubject] = useState('');
   const [examDate, setExamDate] = useState('');
   const [time, setTime] = useState('09:00');
@@ -92,11 +93,12 @@ export default function Exams() {
   const [difficulty, setDifficulty] = useState(3);
   const [currentKnowledge, setCurrentKnowledge] = useState(3);
   const [priority, setPriority] = useState(3);
+  const [hourMode, setHourMode] = useState('topic');
+  const [totalHours, setTotalHours] = useState(10);
   const [topics, setTopics] = useState([{ name: '', hours: 1 }]);
-  const [availableHours, setAvailableHours] = useState({...defaultAvailableHours});
+  const [availableHours, setAvailableHours] = useState({...defaultAvailableHours });
   const [breakRatio, setBreakRatio] = useState({ study: 50, break: 10 });
 
-  // Global schedule config
   const [config, setConfig] = useState({
     startHour: 9,
     endHour: 18,
@@ -172,8 +174,10 @@ export default function Exams() {
     setDifficulty(3);
     setCurrentKnowledge(3);
     setPriority(exams.length + 1);
+    setHourMode('topic');
+    setTotalHours(10);
     setTopics([{ name: '', hours: 1 }]);
-    setAvailableHours({...defaultAvailableHours});
+    setAvailableHours({...defaultAvailableHours });
     setBreakRatio({ study: 50, break: 10 });
   };
 
@@ -192,7 +196,10 @@ export default function Exams() {
       difficulty,
       currentKnowledge,
       priority,
-      syllabusTopics: filteredTopics,
+      totalHours: hourMode === 'subject'? totalHours : undefined,
+      syllabusTopics: hourMode === 'topic'
+       ? filteredTopics
+        : filteredTopics.map(t => ({ name: t.name, hours: totalHours / filteredTopics.length })),
       availableHours,
       breakRatio
     };
@@ -303,11 +310,56 @@ export default function Exams() {
           </div>
 
           <div className="topics-section">
-            <h4>Topics to Study *</h4>
+            <div className="topics-header">
+              <h4>Topics to Study *</h4>
+              <div className="hour-mode-toggle">
+                <button
+                  type="button"
+                  className={hourMode === 'subject'? 'active' : ''}
+                  onClick={() => setHourMode('subject')}
+                >
+                  Total Hours
+                </button>
+                <button
+                  type="button"
+                  className={hourMode === 'topic'? 'active' : ''}
+                  onClick={() => setHourMode('topic')}
+                >
+                  Per Topic
+                </button>
+              </div>
+            </div>
+
+            {hourMode === 'subject' && (
+              <div className="form-row">
+                <input
+                  type="number"
+                  placeholder="Total hours for exam"
+                  min="1"
+                  value={totalHours}
+                  onChange={e => setTotalHours(Number(e.target.value))}
+                />
+              </div>
+            )}
+
             {topics.map((topic, i) => (
               <div key={i} className="topic-row">
-                <input type="text" placeholder="Topic name" value={topic.name} onChange={e => updateTopic(i, 'name', e.target.value)} />
-                <input type="number" placeholder="Hours" min="0.5" step="0.5" value={topic.hours} onChange={e => updateTopic(i, 'hours', e.target.value)} />
+                <input
+                  type="text"
+                  placeholder="Topic name"
+                  value={topic.name}
+                  onChange={e => updateTopic(i, 'name', e.target.value)}
+                />
+                {hourMode === 'topic' && (
+                  <input
+                    type="number"
+                    placeholder="Hours"
+                    min="0.5"
+                    step="0.5"
+                    value={topic.hours}
+                    onChange={e => updateTopic(i, 'hours', e.target.value)}
+                  />
+                )}
                 <button type="button" onClick={() => removeTopic(i)} className="btn-danger-sm">×</button>
               </div>
             ))}
@@ -317,7 +369,7 @@ export default function Exams() {
           <div className="hours-section">
             <h4>Available Study Hours Per Day</h4>
             <div className="hours-grid">
-              {['sun','mon','tue','wed','thu','fri','sat'].map(day => (
+              {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(day => (
                 <div key={day} className="hour-input">
                   <label>{day.toUpperCase()}</label>
                   <input type="number" min="0" max="24" value={availableHours[day]} onChange={e => updateAvailableHours(day, e.target.value)} />
@@ -330,10 +382,10 @@ export default function Exams() {
             <h4>Break Ratio</h4>
             <div className="form-row">
               <label>Study (min):
-                <input type="number" min="25" max="120" value={breakRatio.study} onChange={e => setBreakRatio({...breakRatio, study: Number(e.target.value)})} />
+                <input type="number" min="25" max="120" value={breakRatio.study} onChange={e => setBreakRatio({...breakRatio, study: Number(e.target.value) })} />
               </label>
               <label>Break (min):
-                <input type="number" min="5" max="30" value={breakRatio.break} onChange={e => setBreakRatio({...breakRatio, break: Number(e.target.value)})} />
+                <input type="number" min="5" max="30" value={breakRatio.break} onChange={e => setBreakRatio({...breakRatio, break: Number(e.target.value) })} />
               </label>
             </div>
           </div>
@@ -347,13 +399,13 @@ export default function Exams() {
           <h4>Global Schedule Settings</h4>
           <div className="form-row">
             <label>Day starts at:
-              <input type="number" min="0" max="23" value={config.startHour} onChange={e => setConfig({...config, startHour: Number(e.target.value)})} />
+              <input type="number" min="0" max="23" value={config.startHour} onChange={e => setConfig({...config, startHour: Number(e.target.value) })} />
             </label>
             <label>Day ends at:
-              <input type="number" min="0" max="23" value={config.endHour} onChange={e => setConfig({...config, endHour: Number(e.target.value)})} />
+              <input type="number" min="0" max="23" value={config.endHour} onChange={e => setConfig({...config, endHour: Number(e.target.value) })} />
             </label>
             <label>Start from:
-              <input type="date" value={config.startDate} onChange={e => setConfig({...config, startDate: e.target.value})} />
+              <input type="date" value={config.startDate} onChange={e => setConfig({...config, startDate: e.target.value })} />
             </label>
           </div>
         </div>
