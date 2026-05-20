@@ -392,21 +392,21 @@ export default function PlanSetup() {
       const savedExams = [];
       for (let i = 0; i < exams.length; i++) {
         const exam = exams[i];
-        const examPayload = {
-          subject: exam.subject,
-          examDate: exam.date,
-          time: exam.time,
-          location: exam.location,
-          difficulty: exam.difficulty,
-          currentKnowledge: exam.currentKnowledge,
-          priority: i + 1,
-          totalHours: exam.hourMode === 'subject'? exam.totalHours : undefined,
-          syllabusTopics: exam.hourMode === 'topic'
-       ? exam.syllabusTopics.filter(t => t.name?.trim())
-            : exam.syllabusTopics.filter(t => typeof t === 'string' && t.trim()),
-          availableHours: exam.availableHours,
-          breakRatio: exam.breakRatio
-        };
+       const examPayload = {
+  subject: exam.subject,
+  examDate: exam.date,
+  time: exam.time,
+  location: exam.location,
+  difficulty: exam.difficulty,
+  currentKnowledge: exam.currentKnowledge,
+  priority: i + 1,
+  totalHours: exam.hourMode === 'subject'? exam.totalHours : undefined,
+  syllabusTopics: exam.hourMode === 'topic'  // ← THIS LINE
+    ? exam.syllabusTopics.filter(t => t.name?.trim())
+    : exam.syllabusTopics.filter(t => typeof t === 'string' && t.trim()).map(name => ({ name, hours: 1 })),
+  availableHours: exam.availableHours,
+  breakRatio: exam.breakRatio
+};
 
         const res = await API.post('/exams', examPayload);
         savedExams.push(res.data);
