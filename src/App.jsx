@@ -8,8 +8,7 @@ import TodaysAgenda from './components/TodaysAgenda';
 
 const CalendarView = lazy(() => import('./components/CalendarView'));
 const Profile = lazy(() => import('./components/ProfileandSettings.jsx'));
-const PlanSetup = lazy(() => import('./components/PlanSetup'));
-const Exams = lazy(() => import('./pages/Exams'));
+const Exams = lazy(() => import('./pages/Exams')); // This is now the merged file
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const FocusModeWrapper = lazy(() => import('./pages/FocusModeWrapper'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -56,11 +55,9 @@ function App() {
 
         const registration = await navigator.serviceWorker.ready;
 
-        // Check existing subscription first
         let subscription = await registration.pushManager.getSubscription();
 
         if (!subscription) {
-          // Fetch VAPID key from backend
           const keyRes = await fetch('https://studyplanner-api-awmh.onrender.com/api/notifications/vapid-public-key', {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -78,7 +75,6 @@ function App() {
           });
         }
 
-        // Send subscription to backend
         const res = await fetch('https://studyplanner-api-awmh.onrender.com/api/notifications/subscribe', {
           method: 'POST',
           headers: {
@@ -97,7 +93,7 @@ function App() {
     };
 
     subscribeToPush();
-  }, ); // Runs when user logs in
+  }, [user]); // Fixed: added user dependency
 
   const LoadingFallback = () => (
     <div style={{ textAlign: 'center', marginTop: '50px' }}>
@@ -117,7 +113,6 @@ function App() {
             <Route path="/agenda" element={user? <TodaysAgenda /> : <Navigate to="/auth" />} />
             <Route path="/calendar" element={user? <CalendarView /> : <Navigate to="/auth" />} />
             <Route path="/dashboard" element={user? <Dashboard /> : <Navigate to="/auth" />} />
-            <Route path="/setup" element={user? <PlanSetup /> : <Navigate to="/auth" />} />
             <Route path="/focus" element={user? <FocusModeWrapper /> : <Navigate to="/auth" />} />
             <Route path="/profile" element={user? <Profile /> : <Navigate to="/auth" />} />
             <Route path="/exams" element={user? <Exams /> : <Navigate to="/auth" />} />
