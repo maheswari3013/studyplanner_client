@@ -97,6 +97,7 @@ export default function Exams() {
   const [totalHours, setTotalHours] = useState(10);
   const [topics, setTopics] = useState([{ name: '', hours: 1 }]);
   const [availableHours, setAvailableHours] = useState({...defaultAvailableHours });
+  const [hoursPreset, setHoursPreset] = useState('custom');
   const [breakRatio, setBreakRatio] = useState({ study: 50, break: 10 });
 
   const [config, setConfig] = useState({
@@ -162,7 +163,17 @@ export default function Exams() {
     setTopics(topics.filter((_, i) => i!== index));
   };
 
+  const applyHoursPreset = (preset) => {
+    setHoursPreset(preset);
+    if (preset === 'weekday') {
+      setAvailableHours({ mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 0, sun: 0 });
+    } else if (preset === 'weekend') {
+      setAvailableHours({ mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 6, sun: 6 });
+    }
+  };
+
   const updateAvailableHours = (day, hours) => {
+    setHoursPreset('custom');
     setAvailableHours({...availableHours, [day]: Number(hours) });
   };
 
@@ -178,6 +189,7 @@ export default function Exams() {
     setTotalHours(10);
     setTopics([{ name: '', hours: 1 }]);
     setAvailableHours({...defaultAvailableHours });
+    setHoursPreset('custom');
     setBreakRatio({ study: 50, break: 10 });
   };
 
@@ -198,7 +210,7 @@ export default function Exams() {
       priority,
       totalHours: hourMode === 'subject'? totalHours : undefined,
       syllabusTopics: hourMode === 'topic'
-       ? filteredTopics
+      ? filteredTopics
         : filteredTopics.map(t => ({ name: t.name, hours: totalHours / filteredTopics.length })),
       availableHours,
       breakRatio
@@ -367,7 +379,32 @@ export default function Exams() {
           </div>
 
           <div className="hours-section">
-            <h4>Available Study Hours Per Day</h4>
+            <div className="hours-header">
+              <h4>Available Study Hours Per Day</h4>
+              <div className="hour-mode-toggle">
+                <button
+                  type="button"
+                  className={hoursPreset === 'weekday'? 'active' : ''}
+                  onClick={() => applyHoursPreset('weekday')}
+                >
+                  Weekdays
+                </button>
+                <button
+                  type="button"
+                  className={hoursPreset === 'weekend'? 'active' : ''}
+                  onClick={() => applyHoursPreset('weekend')}
+                >
+                  Weekends
+                </button>
+                <button
+                  type="button"
+                  className={hoursPreset === 'custom'? 'active' : ''}
+                  onClick={() => setHoursPreset('custom')}
+                >
+                  Custom
+                </button>
+              </div>
+            </div>
             <div className="hours-grid">
               {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(day => (
                 <div key={day} className="hour-input">

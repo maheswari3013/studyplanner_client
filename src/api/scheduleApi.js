@@ -2,34 +2,48 @@ import API from './axios';
 
 export const scheduleApi = {
   // Schedule CRUD
-  getSchedule: () => API.get('/schedule'), // Keep for CalendarView full history
+  getSchedule: () => API.get('/schedule'),
   createBlock: (data) => API.post('/schedule', data),
   updateBlock: (id, data) => API.patch(`/schedule/${id}`, data),
   deleteBlock: (id) => API.delete(`/schedule/${id}`),
   
-  // AGENDA - Use this in TodaysAgenda.jsx
-  getAgenda: () => API.get('/schedule/pending'), // ✅ NEW - only pending + missed for today
+  // Agenda - for TodaysAgenda.jsx
+  getAgenda: () => API.get('/schedule/pending'),
+  getTodayBlocks: () => API.get('/schedule/today'),
   
-  // Plan generation - used in PlanSetup.jsx
+  // Plan generation - used in Exams.jsx
   generateSchedule: (params) => API.post('/schedule/generate', params),
   
-  // Time logging - used in StudyTimer.jsx, CalendarView.jsx
-  logTime: (blockId, actualMinutes) => API.post('/schedule/log', { blockId, actualMinutes }),
+  // Block actions
+  completeBlock: (blockId) => API.patch(`/schedule/${blockId}/complete`),
+  markMissed: (blockId) => API.patch(`/schedule/${blockId}/missed`),
+  markPending: (blockId) => API.patch(`/schedule/${blockId}/pending`),
+  startBlock: (blockId) => API.post(`/schedule/${blockId}/start`),
   
-  // Missed/reschedule - used in CalendarView.jsx
-  markMissed: (blockId) => API.patch(`/schedule/${blockId}/missed`), // ✅ Correct
+  // Reschedule
   rescheduleBlock: (blockId, newDate, newTime) => 
     API.patch(`/schedule/${blockId}/reschedule`, { newDate, newTime }),
   
-  // Calendar exports - used in CalendarView.jsx
-  exportICS: (startDate, endDate) => 
-    API.get(`/schedule/export/ics?start=${startDate}&end=${endDate}`, { responseType: 'blob' }),
-  syncGoogle: (code) => API.post('/schedule/sync/google', { code }),
+  // Calendar exports
+  exportPDF: (startDate, endDate) => 
+    API.get(`/schedule/export/pdf?start=${startDate}&end=${endDate}`, { responseType: 'blob' }),
+  exportJSON: () => API.get('/schedule/export'),
+  syncGoogle: () => API.post('/schedule/google/sync'),
+  disconnectGoogle: () => API.delete('/schedule/google/disconnect'),
+  getGoogleAuthUrl: () => API.get('/schedule/google/auth'),
   
-  // Stats & reports - used in Dashboard.jsx
+  // Stats & reports
   getStats: () => API.get('/schedule/stats'),
-  getWeeklyReport: (weekStart) => API.get(`/schedule/report/weekly?start=${weekStart}`),
-  getTodayBlocks: () => API.get('/schedule/pending') // ✅ Changed from /today to /pending
+  getExamsWithStats: () => API.get('/schedule/exams'),
+  getProgress: () => API.get('/schedule/progress'),
+  getReadiness: () => API.get('/schedule/readiness'),
+  getAffirmation: () => API.get('/schedule/affirmation'),
+  
+  // User settings
+  updateConfidence: (subject, level) => API.patch('/schedule/user/confidence', { subject, level }),
+  
+  // Clear all
+  clearAll: () => API.delete('/schedule/clear-all')
 };
 
 export default scheduleApi;
