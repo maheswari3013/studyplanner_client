@@ -239,36 +239,39 @@ export default function Exams() {
   };
 
   const handleGenerateAll = async () => {
-    if (exams.length === 0) return toast.error('Add at least 1 exam first');
-    setGenerating(true);
+  if (exams.length === 0) return toast.error('Add at least 1 exam first');
+  setGenerating(true);
 
-    try {
-      const res = await scheduleApi.generateSchedule({ exams, config });
+  try {
+    const res = await scheduleApi.generateSchedule({ 
+      exams, 
+      config // ← Now sending your Day starts/ends from UI
+    });
 
-      if (!res.data.success) {
-        res.data.conflicts?.forEach(c => {
-          if (c.type === 'TOPIC_IMPOSSIBLE') {
-            toast.error(`${c.topicName}: needs ${c.required.toFixed(1)}h, only ${c.maxPossible.toFixed(1)}h possible`, { duration: 6000 });
-          } else {
-            toast.error(c.message, { duration: 6000 });
-          }
-        });
-        return;
-      }
-
-      toast.success(`Generated ${res.data.count} study blocks`);
-      navigate('/calendar');
-    } catch (err) {
-      const conflicts = err.response?.data?.conflicts;
-      if (conflicts) {
-        conflicts.forEach(c => toast.error(c.message || 'Conflict detected', { duration: 6000 }));
-      } else {
-        toast.error(err.response?.data?.msg || 'Failed to generate plan');
-      }
-    } finally {
-      setGenerating(false);
+    if (!res.data.success) {
+      res.data.conflicts?.forEach(c => {
+        if (c.type === 'TOPIC_IMPOSSIBLE') {
+          toast.error(`${c.topicName}: needs ${c.required.toFixed(1)}h, only ${c.maxPossible.toFixed(1)}h possible`, { duration: 6000 });
+        } else {
+          toast.error(c.message, { duration: 6000 });
+        }
+      });
+      return;
     }
-  };
+
+    toast.success(`Generated ${res.data.count} study blocks`);
+    navigate('/calendar');
+  } catch (err) {
+    const conflicts = err.response?.data?.conflicts;
+    if (conflicts) {
+      conflicts.forEach(c => toast.error(c.message || 'Conflict detected', { duration: 6000 }));
+    } else {
+      toast.error(err.response?.data?.msg || 'Failed to generate plan');
+    }
+  } finally {
+    setGenerating(false);
+  }
+};
 
   if (loading) return <div className="exams-container"><p>Loading...</p></div>;
 
