@@ -208,3 +208,154 @@
 .loading {
   padding: 20px;
 }
+/* Exam Form */
+.exam-form {
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  background: white;
+}
+
+.exam-form h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+.exam-form h4 {
+  margin-top: 20px;
+  margin-bottom: 12px;
+  color: #374151;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.exam-form input[type="text"],
+.exam-form input[type="date"],
+.exam-form input[type="time"],
+.exam-form input[type="number"] {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.exam-form input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Topics Section */
+.topics-section {
+  margin-top: 20px;
+}
+
+.topic-row {
+  display: grid;
+  grid-template-columns: 2fr 100px 40px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.btn-danger-sm {
+  padding: 8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  height: 38px;
+}
+
+.btn-danger-sm:hover {
+  background: #dc2626;
+}
+
+/* Available Hours Section */
+.hours-section {
+  margin-top: 20px;
+}
+
+.hours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 12px;
+}
+
+.hour-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hour-input label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+}
+
+.hour-input input {
+  text-align: center;
+  padding: 8px;
+}
+
+/* Update existing exam-card to show more info */
+.exam-info p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.exam-info h3 {
+  margin: 0 0 8px 0;
+  color: #1f2937;
+}
+
+/* Header actions spacing */
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .topic-row {
+    grid-template-columns: 1fr 80px 40px;
+  }
+  
+  .hours-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .exams-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .header-actions {
+    width: 100%;
+  }
+  
+  .header-actions button {
+    flex: 1;
+  }
+}
