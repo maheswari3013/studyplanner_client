@@ -13,6 +13,7 @@ const Auth = () => {
   const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '', otp: '' });
   const [error, setError] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const { setAuthData } = useAuth();
   const navigate = useNavigate();
 
@@ -92,6 +93,22 @@ const Auth = () => {
     }
   };
 
+  const handleResendRegisterOtp = async () => {
+    setResendLoading(true);
+    try {
+      const res = await API.post('/auth/register', { username, email, password });
+      if (res.data.devMode && res.data.otp) {
+        setFormData({...formData, otp: res.data.otp });
+        toast.success(`OTP: ${res.data.otp}`, { duration: 8000 });
+      } else {
+        toast.success(res.data.msg || 'OTP resent');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to resend');
+    }
+    setResendLoading(false);
+  };
+
   const handleVerifyRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -158,6 +175,22 @@ const Auth = () => {
     } finally {
       setSubmitLoading(false);
     }
+  };
+
+  const handleResendResetOtp = async () => {
+    setResendLoading(true);
+    try {
+      const res = await API.post('/auth/forgot-password', { email });
+      if (res.data.devMode && res.data.otp) {
+        setFormData({...formData, otp: res.data.otp });
+        toast.success(`OTP: ${res.data.otp}`, { duration: 8000 });
+      } else {
+        toast.success(res.data.msg || 'OTP resent');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to resend');
+    }
+    setResendLoading(false);
   };
 
   const handleResetPassword = async (e) => {
@@ -240,10 +273,21 @@ const Auth = () => {
         )}
 
         {(mode === 'verify' || mode === 'reset') && (
-          <input
-            type="text" name="otp" placeholder="6-digit OTP"
-            value={otp} onChange={onChange} maxLength="6" required
-          />
+          <>
+            <input
+              type="text" name="otp" placeholder="6-digit OTP"
+              value={otp} onChange={onChange} maxLength="6" required
+            />
+            <button 
+              type="button" 
+              onClick={mode === 'verify'? handleResendRegisterOtp : handleResendResetOtp}
+              disabled={resendLoading}
+              className="btn-link"
+              style={{ marginTop: '8px' }}
+            >
+              {resendLoading? 'Sending...' : 'Resend OTP'}
+            </button>
+          </>
         )}
 
         <button type="submit" disabled={submitLoading}>

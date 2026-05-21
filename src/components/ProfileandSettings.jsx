@@ -1,9 +1,9 @@
 import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import API from '../api/axios';
-import emailjs from "@emailjs/browser";
 import '../assets/profile.css';
 import { exportToPDF, exportToICS } from '../utils/exportUtils';
+import toast from 'react-hot-toast';
 
 const validatePassword = (password) => {
   const minLength = password.length >= 8;
@@ -26,7 +26,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export default function Profile() {
-  const { user, logout, updateUser, token } = useContext(AuthContext);
+  const { user, logout, updateUser } = useContext(AuthContext);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -40,10 +40,7 @@ export default function Profile() {
   const [newEmail, setNewEmail] = useState('');
   const [emailChangeStep, setEmailChangeStep] = useState(0); // 0=init, 1=verifyOld, 2=verifyNew
   const [oldEmailOtp, setOldEmailOtp] = useState('');
-  const [sentOldOtp, setSentOldOtp] = useState('');
   const [newEmailOtp, setNewEmailOtp] = useState('');
-  const [sentNewOtp, setSentNewOtp] = useState('');
-  const [otpExpiry, setOtpExpiry] = useState(null);
   const [otpLoading, setOtpLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifStatus, setNotifStatus] = useState('checking');
@@ -64,9 +61,6 @@ export default function Profile() {
     setNewEmail('');
     setOldEmailOtp('');
     setNewEmailOtp('');
-    setSentOldOtp('');
-    setSentNewOtp('');
-    setOtpExpiry(null);
   };
 
   const handleExport = async (type) => {
@@ -75,14 +69,14 @@ export default function Profile() {
       const res = await API.get('/schedule/export');
       const blocks = res.data;
       if (!blocks.length) {
-        alert('No study blocks to export. Create some first.');
+        toast.error('No study blocks to export. Create some first.');
         return;
       }
       if (type === 'pdf') exportToPDF(blocks, user.name);
       else exportToICS(blocks);
     } catch (err) {
       console.error(err);
-      alert('Export failed');
+      toast.error('Export failed');
     } finally {
       setExporting(false);
     }
@@ -91,12 +85,12 @@ export default function Profile() {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (passwordData.newPassword!== passwordData.confirmPassword) {
-      alert('New passwords do not match');
+      toast.error('New passwords do not match');
       return;
     }
     const passwordError = validatePassword(passwordData.newPassword);
     if (passwordError) {
-      alert(passwordError);
+      toast.error(passwordError);
       return;
     }
     setLoading(true);
@@ -105,11 +99,11 @@ export default function Profile() {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
       });
-      alert('Password changed successfully');
+      toast.success('Password changed successfully');
       setShowPasswordForm(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      alert(err.response?.data?.msg || 'Failed to change password');
+      toast.error(err.response?.data?.msg || 'Failed to change password');
     } finally {
       setLoading(false);
     }
@@ -117,76 +111,36 @@ export default function Profile() {
 
   const sendOtpToOldEmail = async () => {
     if (!newEmail || newEmail === user.email) {
-      alert('Enter a new email address');
+      toast.error('Enter a new email address');
       return;
     }
     setOtpLoading(true);
     try {
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000);
-      const expiry = Date.now() + 15 * 60 * 1000;
-      setSentOldOtp(String(generatedOtp));
-      setOtpExpiry(expiry);
-      const time = new Date(expiry);
-      const expiryTime = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
-      
-      await emailjs.send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        { 
-          email: user.email,
-          otp: generatedOtp, 
-          time: expiryTime,
-          name: user.name,
-          message: `Verify this change. Someone requested to change your account email to ${newEmail}. If this wasn't you, secure your account.`
-        },
-        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-      );
+      const res = await API.post('/auth/request-email-change', { newEmail });
       setEmailChangeStep(1);
-      alert('OTP sent to your current email. Please verify.');
+      if (res.data.devMode) {
+        toast.success(`DEV OTP: ${res.data.otp}`, { duration: 8000 });
+      } else {
+        toast.success('OTP sent to your current email');
+      }
     } catch (err) {
-      console.error(err);
-      alert('Failed to send OTP to current email');
+      toast.error(err.response?.data?.msg || 'Failed to send OTP');
     }
     setOtpLoading(false);
   };
 
   const verifyOldEmailAndSendNew = async () => {
-    if (!sentOldOtp || oldEmailOtp!== sentOldOtp) {
-      alert('Invalid OTP for current email');
-      return;
-    }
-    if (Date.now() > otpExpiry) {
-      alert('OTP expired. Start over.');
-      resetEmailFlow();
-      return;
-    }
-    
     setOtpLoading(true);
     try {
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000);
-      const expiry = Date.now() + 15 * 60 * 1000;
-      setSentNewOtp(String(generatedOtp));
-      setOtpExpiry(expiry);
-      const time = new Date(expiry);
-      const expiryTime = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
-      
-      await emailjs.send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        { 
-          email: newEmail,
-          otp: generatedOtp, 
-          time: expiryTime,
-          name: user.name,
-          message: `Verify your new email address for StudyPlanner`
-        },
-        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-      );
+      const res = await API.post('/auth/verify-old-email', { otp: oldEmailOtp });
       setEmailChangeStep(2);
-      alert('Current email verified. OTP sent to new email.');
+      if (res.data.devMode) {
+        toast.success(`DEV OTP: ${res.data.otp}`, { duration: 8000 });
+      } else {
+        toast.success('Current email verified. OTP sent to new email');
+      }
     } catch (err) {
-      console.error(err);
-      alert('Failed to send OTP to new email');
+      toast.error(err.response?.data?.msg || 'Verification failed');
     }
     setOtpLoading(false);
   };
@@ -194,30 +148,14 @@ export default function Profile() {
   const handleEmailChange = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
-    if (!sentNewOtp || newEmailOtp!== sentNewOtp) {
-      alert('Invalid OTP for new email');
-      setLoading(false);
-      return;
-    }
-    if (Date.now() > otpExpiry) {
-      alert('OTP expired. Start over.');
-      resetEmailFlow();
-      setLoading(false);
-      return;
-    }
-    
     try {
-      const res = await API.patch('/auth/profile', {
-        name: user.name,
-        email: newEmail
-      });
+      const res = await API.patch('/auth/confirm-email-change', { otp: newEmailOtp });
       updateUser(res.data);
-      alert('Email updated successfully');
+      toast.success('Email updated successfully');
       setShowEmailForm(false);
       resetEmailFlow();
     } catch (err) {
-      alert(err.response?.data?.msg || 'Update failed');
+      toast.error(err.response?.data?.msg || 'Update failed');
     } finally {
       setLoading(false);
     }
@@ -225,13 +163,13 @@ export default function Profile() {
 
   const subscribeToNotifications = async () => {
     if (!('serviceWorker' in navigator) ||!('PushManager' in window)) {
-      alert('Push notifications not supported');
+      toast.error('Push notifications not supported');
       return;
     }
     try {
       const permission = await Notification.requestPermission();
       if (permission!== 'granted') {
-        alert('Notification permission denied');
+        toast.error('Notification permission denied');
         return;
       }
       const reg = await navigator.serviceWorker.ready;
@@ -242,10 +180,10 @@ export default function Profile() {
       
       await API.post('/notifications/subscribe', subscription);
       setNotifStatus('enabled');
-      alert('Notifications enabled! You will get study reminders.');
+      toast.success('Notifications enabled! You will get study reminders.');
     } catch (err) {
       console.error(err);
-      alert('Failed to enable notifications: ' + err.message);
+      toast.error('Failed to enable notifications: ' + err.message);
     }
   };
 
