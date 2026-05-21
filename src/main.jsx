@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ColorProvider } from './context/ColorConstraints.jsx'
 import { ScheduleProvider } from './context/ScheduleContext.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import './assets/variables.css'
 import './assets/styles.css'
