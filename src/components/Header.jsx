@@ -13,18 +13,17 @@ export default function Header() {
     logout();
     navigate('/auth');
   };
-
+  console.log('User in Header:', user);
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#6366f1' },
     { path: '/agenda', label: 'Today\'s Agenda', icon: ListTodo, color: '#8b5cf6' },
     { path: '/calendar', label: 'Calendar', icon: Calendar, color: '#ec4899' },
     { path: '/exams', label: 'Exams', icon: BookOpen, color: '#f59e0b' },
     { path: '/profile', label: 'Profile', icon: User, color: '#06b6d4' },
-  ...(user?.isAdmin? [
-      { path: '/admin', label: 'Admin', icon: Shield, color: '#dc2626' }
-    ] : [])
+...(user?.role === 'admin' ? [
+  { path: '/admin', label: 'Admin', icon: Shield, color: '#dc2626' }
+] : [])
   ];
-
   if (!user) return null;
 
   return (
