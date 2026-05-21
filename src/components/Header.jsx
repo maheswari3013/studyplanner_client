@@ -53,9 +53,7 @@ export default function Header() {
         </div>
 
         <div className="nav-user">
-          <div className="user-avatar">
-            {user.name.charAt(0).toUpperCase()}
-          </div>
+          <div className="avatar">{user?.username?.charAt(0) || '?'}</div>
           <div className="user-info">
             <span className="nav-username">{user.name}</span>
             <span className="nav-role">{user.isAdmin? 'Admin' : 'Student'}</span>
