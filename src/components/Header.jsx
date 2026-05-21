@@ -51,16 +51,16 @@ export default function Header() {
           ))}
         </div>
 
-        <div className="nav-user">
-          <div className="avatar">{user?.username?.charAt(0) || '?'}</div>
-          <div className="user-info">
-            <span className="nav-username">{user.name}</span>
-            <span className="nav-role">{user.isAdmin? 'Admin' : 'Student'}</span>
-          </div>
-          <button onClick={handleLogout} className="btn-logout-pro" title="Logout">
-            <LogOut size={18} />
-          </button>
-        </div>
+<div className="nav-user">
+  <div className="avatar">{user?.username?.charAt(0) || '?'}</div>
+  <div className="user-info">
+    <span className="nav-username">{user?.username || user?.name}</span>
+    <span className="nav-role">{user?.role === 'admin' ? 'Admin' : 'Student'}</span>
+  </div>
+  <button onClick={handleLogout} className="btn-logout-pro" title="Logout">
+    <LogOut size={18} />
+  </button>
+</div>
       </div>
     </nav>
   );
