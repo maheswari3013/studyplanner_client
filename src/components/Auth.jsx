@@ -1,27 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { userApi } from '../api/userApi';
 import API from '../api/axios';
 import '../assets/Auth.css';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { validatePassword, getPasswordError } from '../utils/validatePassword';
 
 const VAPID_PUBLIC_KEY = 'BOHFuuYR-Esh5cxDIUQKh_Vqmvx5xMo70osWEiEZKmbJGQvKegSio0oGQMUbZuAypHhkp6JcZ5HlBu0A2sShFgs';
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [step, setStep] = useState('form'); // 'form' | 'otp'
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-  const [otp, setOtp] = useState('');
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'verify' | 'forgot' | 'reset'
+  const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '', otp: '' });
   const [error, setError] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const { setAuthData } = useAuth();
   const navigate = useNavigate();
 
-  const { name, email, password } = formData;
+  const { username, email, password, confirmPassword, otp } = formData;
 
   const onChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value });
+    setError('');
   };
 
   function urlBase64ToUint8Array(base64String) {
@@ -56,14 +55,27 @@ const Auth = () => {
     }
   };
 
-  const handleSendOTP = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (password!== confirmPassword) {
+      setError('Passwords do not match');
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (!validatePassword(password)) {
+      const msg = getPasswordError(password);
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
     setSubmitLoading(true);
     try {
-      await API.post('/auth/send-otp', { name, email, password });
-      setStep('otp');
-      toast.success('OTP sent to your email');
+      await API.post('/auth/register', { username, email, password });
+      setMode('verify');
+      toast.success('OTP sent to your email. Check spam too.');
     } catch (err) {
       const msg = err.response?.data?.msg || 'Failed to send OTP';
       setError(msg);
@@ -73,17 +85,15 @@ const Auth = () => {
     }
   };
 
-  const handleVerifyOTP = async (e) => {
+  const handleVerifyRegister = async (e) => {
     e.preventDefault();
     setError('');
     setSubmitLoading(true);
     try {
-      const res = await API.post('/auth/verify-otp', { email, otp });
-      const payload = res.data.data || res.data;
-      const token = payload.token;
-      const user = payload.user;
+      const res = await API.post('/auth/verify-register', { email, otp });
+      const { token, user } = res.data; // FIXED: backend returns { token, user } directly
 
-      if (!token || !user) throw new Error('Invalid response');
+      if (!token ||!user) throw new Error('Invalid response');
 
       setAuthData(token, user);
       toast.success('Registration successful');
@@ -102,12 +112,10 @@ const Auth = () => {
     setError('');
     setSubmitLoading(true);
     try {
-      const res = await userApi.login({ email, password });
-      const payload = res.data.data || res.data;
-      const token = payload.token;
-      const user = payload.user;
+      const res = await API.post('/auth/login', { email, password });
+      const { token, user } = res.data; // FIXED: backend returns { token, user } directly
 
-      if (!token || !user) throw new Error('Invalid response from server');
+      if (!token ||!user) throw new Error('Invalid response from server');
 
       setAuthData(token, user);
       subscribeUser(token).catch(() => {});
@@ -121,64 +129,151 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitLoading(true);
+    try {
+      await API.post('/auth/forgot-password', { email });
+      setMode('reset');
+      toast.success('Reset OTP sent to your email');
+    } catch (err) {
+      const msg = err.response?.data?.msg || 'Failed to send OTP';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (password!== confirmPassword) {
+      setError('Passwords do not match');
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (!validatePassword(password)) {
+      const msg = getPasswordError(password);
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    setSubmitLoading(true);
+    try {
+      await API.post('/auth/reset-password', { email, otp, newPassword: password });
+      setMode('login');
+      setFormData({...formData, password: '', confirmPassword: '', otp: '' });
+      toast.success('Password reset successful. Please login.');
+    } catch (err) {
+      const msg = err.response?.data?.msg || 'Reset failed';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const getTitle = () => {
+    if (mode === 'login') return 'Login';
+    if (mode === 'register') return 'Register';
+    if (mode === 'verify') return 'Verify OTP';
+    if (mode === 'forgot') return 'Forgot Password';
+    if (mode === 'reset') return 'Reset Password';
+  };
+
+  const getSubmitHandler = () => {
+    if (mode === 'login') return handleLogin;
+    if (mode === 'register') return handleRegister;
+    if (mode === 'verify') return handleVerifyRegister;
+    if (mode === 'forgot') return handleForgotPassword;
+    if (mode === 'reset') return handleResetPassword;
+  };
+
   return (
     <div className="auth-container">
-      <h2>{isLogin ? 'Login' : step === 'otp' ? 'Verify OTP' : 'Register'}</h2>
+      <h2>{getTitle()}</h2>
       {error && <p className="error-msg">{error}</p>}
-      
-      {isLogin ? (
-        <form onSubmit={handleLogin} className="auth-form">
-          <input type="email" name="email" placeholder="Email" value={email} onChange={onChange} required />
-          <input type="password" name="password" placeholder="Password" value={password} onChange={onChange} required />
-          <button type="submit" disabled={submitLoading}>
-            {submitLoading ? 'Processing...' : 'Login'}
-          </button>
-        </form>
-      ) : step === 'form' ? (
-        <form onSubmit={handleSendOTP} className="auth-form">
-          <input type="text" name="name" placeholder="Name" value={name} onChange={onChange} required />
-          <input type="email" name="email" placeholder="Email" value={email} onChange={onChange} required />
-          <input type="password" name="password" placeholder="Password - 8+ chars, 1 upper, 1 number, 1 special" value={password} onChange={onChange} required />
-          <button type="submit" disabled={submitLoading}>
-            {submitLoading ? 'Sending OTP...' : 'Send OTP'}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleVerifyOTP} className="auth-form">
-          <p>Enter OTP sent to {email}</p>
-          <input 
-            type="text" 
-            placeholder="6-digit OTP" 
-            value={otp} 
-            onChange={(e) => setOtp(e.target.value)} 
-            maxLength="6"
-            required 
-          />
-          <button type="submit" disabled={submitLoading}>
-            {submitLoading ? 'Verifying...' : 'Verify & Register'}
-          </button>
-          <button 
-            type="button" 
-            className="toggle-auth" 
-            onClick={() => setStep('form')}
-          >
-            Back
-          </button>
-        </form>
-      )}
 
-      <button 
-        type="button"
-        className="toggle-auth register-link" 
-        onClick={() => { 
-          setIsLogin(!isLogin); 
-          setStep('form');
-          setError(''); 
-          setOtp('');
-        }}
-      >
-        {isLogin ? 'Need to register?' : 'Already have account?'}
-      </button>
+      <form onSubmit={getSubmitHandler()} className="auth-form">
+        {mode === 'register' && (
+          <input type="text" name="username" placeholder="Username" value={username} onChange={onChange} required />
+        )}
+
+        {(mode === 'login' || mode === 'register' || mode === 'forgot' || mode === 'reset') && (
+          <input
+            type="email" name="email" placeholder="Email" value={email} onChange={onChange}
+            required disabled={mode === 'verify' || mode === 'reset'}
+          />
+        )}
+
+        {(mode === 'login' || mode === 'register' || mode === 'reset') && (
+          <input
+            type="password" name="password"
+            placeholder={mode === 'reset'? 'New Password' : 'Password'}
+            value={password} onChange={onChange} required
+          />
+        )}
+
+        {(mode === 'register' || mode === 'reset') && (
+          <input
+            type="password" name="confirmPassword" placeholder="Confirm Password"
+            value={confirmPassword} onChange={onChange} required
+          />
+        )}
+
+        {(mode === 'verify' || mode === 'reset') && (
+          <input
+            type="text" name="otp" placeholder="6-digit OTP"
+            value={otp} onChange={onChange} maxLength="6" required
+          />
+        )}
+
+        <button type="submit" disabled={submitLoading}>
+          {submitLoading? 'Processing...' :
+            mode === 'login'? 'Login' :
+            mode === 'register'? 'Send OTP' :
+            mode === 'verify'? 'Verify & Register' :
+            mode === 'forgot'? 'Send Reset OTP' :
+            'Reset Password'
+          }
+        </button>
+      </form>
+
+      <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+        {mode === 'login' && (
+          <>
+            <button type="button" className="toggle-auth" onClick={() => setMode('forgot')}>
+              Forgot Password?
+            </button>
+            <button
+              type="button" className="toggle-auth register-link"
+              onClick={() => { setMode('register'); setError(''); }}
+            >
+              Need to register?
+            </button>
+          </>
+        )}
+        {mode === 'register' && (
+          <button
+            type="button" className="toggle-auth register-link"
+            onClick={() => { setMode('login'); setError(''); }}
+          >
+            Already have account?
+          </button>
+        )}
+        {(mode === 'verify' || mode === 'forgot' || mode === 'reset') && (
+          <button
+            type="button" className="toggle-auth"
+            onClick={() => { setMode('login'); setError(''); setFormData({...formData, otp: '' }); }} // FIXED: use setFormData
+          >
+            Back to Login
+          </button>
+        )}
+      </div>
     </div>
   );
 }
