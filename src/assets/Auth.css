@@ -156,3 +156,40 @@
     font-size: 28px;
   }
 }
+.resend-otp-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.resend-otp-btn:hover:not(:disabled) {
+  background: #ef4444;
+  color: white;
+}
+
+.resend-otp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #9ca3af;
+  color: #9ca3af;
+}
+
+/* If you want solid red instead of outline */
+.resend-otp-btn.solid {
+  background: #ef4444;
+  color: white;
+  border: none;
+}
+
+.resend-otp-btn.solid:hover:not(:disabled) {
+  background: #dc2626;
+}

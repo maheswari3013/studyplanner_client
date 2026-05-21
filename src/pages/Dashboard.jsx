@@ -1,524 +1,293 @@
-import { useState, useEffect, useContext } from 'react';
-import API from '../api/axios';
-import { AuthContext } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Sparkles, TrendingUp, CheckCircle2, AlertCircle, Clock, Zap, BookOpen, Target, RefreshCw, Trash2, Calendar } from 'lucide-react';
+import { Activity, Users, Server, AlertTriangle, RefreshCw, Shield, Cpu, HardDrive, Mail, Trash2 } from 'lucide-react';
+import API from '../api/axios';
 import toast, { Toaster } from 'react-hot-toast';
-import '../assets/Dashboard.css';
+import '../assets/AdminDashboard.css';
 
-const COLORS = ['#667eea', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'];
-const HEAVY_WEEK_THRESHOLD = 20; // Hours per week to trigger affirmations
-
-export default function Dashboard() {
-  const [stats, setStats] = useState(null);
-  const [exams, setExams] = useState([]);
-  const [blocks, setBlocks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [showDateModal, setShowDateModal] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [progressData, setProgressData] = useState([]);
-  const [readiness, setReadiness] = useState([]);
-  const [affirmation, setAffirmation] = useState('');
-  const [loggingBlock, setLoggingBlock] = useState(null);
-  const [actualMinutes, setActualMinutes] = useState('');
-  const { user, token, logout } = useContext(AuthContext);
+export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [health, setHealth] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+  const [errors, setErrors] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [otps, setOtps] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  const fetchData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    fetchAdminData();
+    const interval = setInterval(fetchAdminData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchAdminData = async () => {
+    if (!loading) setRefreshing(true);
+    setError(null);
     try {
-      const [examsRes, statsRes, blocksRes, progressRes, readinessRes, affirmationRes] = await Promise.all([
-        API.get('/schedule/exams'),
-        API.get('/schedule/stats'),
-        API.get('/schedule'),
-        API.get('/schedule/progress'),
-        API.get('/schedule/readiness'),
-        API.get('/schedule/affirmation')
+      const [healthRes, metricsRes, errorsRes, usersRes, otpsRes] = await Promise.all([
+        API.get('/admin/health'),
+        API.get('/admin/metrics'),
+        API.get('/admin/errors'),
+        API.get('/admin/users'),
+        API.get('/admin/otps')
       ]);
-      setExams(examsRes.data);
-     const s = statsRes.data;
-setStats({
-  total: s.total ?? s.totalScheduled ?? 0,
-  completed: s.completed ?? s.totalCompleted ?? 0,
-  missed: s.missed ?? 0,
-  remaining: s.remaining ?? 0,
-  completionRate: s.completionRate ?? 0,
-  bySubject: s.bySubject ?? []
-});
-      setBlocks(blocksRes.data);
-      setProgressData(progressRes.data);
-      setReadiness(readinessRes.data);
-      setAffirmation(affirmationRes.data.quote);
+      setHealth(healthRes.data);
+      setMetrics(metricsRes.data);
+      setErrors(errorsRes.data);
+      setUsers(usersRes.data);
+      setOtps(otpsRes.data);
     } catch (err) {
-      console.error('Fetch error:', err.response?.data || err.message);
-      if (err.response?.status === 401) {
-        logout();
-        navigate('/auth');
+      const msg = err.response?.data?.msg || 'Failed to load admin data';
+      setError(msg);
+      if (err.response?.status === 403) {
+        toast.error('Admin access required');
+        setTimeout(() => navigate('/agenda'), 1500);
       } else {
-        toast.error('Failed to refresh: ' + (err.response?.data?.msg || err.message));
+        toast.error(msg);
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    if (token) fetchData();
-  }, [token]);
-
-  const generateSchedule = async () => {
-    setGenerating(true);
+  const deleteUser = async (id, email) => {
+    if (!confirm(`Delete user ${email}?`)) return;
     try {
-      const config = {
-        startDate: startDate || new Date(Date.now() + 86400000).toISOString().split('T')[0],
-        startHour: 9,
-        endHour: 18
-      };
-
-      const body = { exams, config };
-      const res = await API.post('/schedule/generate', body);
-
-      if (!res.data.success) {
-        const conflicts = res.data.conflicts || [];
-        if (conflicts.length > 0) {
-          const msg = conflicts.map(c => {
-            if (c.type === 'TOPIC_IMPOSSIBLE') {
-              return `${c.topicName}: needs ${c.required?.toFixed(1)}h but only ${c.maxPossible?.toFixed(1)}h available`;
-            }
-            if (c.type === 'INSUFFICIENT_TIME') {
-              return `Need ${c.deficit?.toFixed(1)}h more time`;
-            }
-            return c.msg || 'Conflict detected';
-          }).join('\n');
-          toast.error(msg);
-        }
-        return;
-      }
-
-      toast.success(`Generated ${res.data.count} study blocks`);
-      setShowDateModal(false);
-      setStartDate('');
-      await fetchData();
+      await API.delete(`/admin/user/${id}`);
+      toast.success('User deleted');
+      fetchAdminData();
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Error generating schedule');
-    } finally {
-      setGenerating(false);
+      toast.error(err.response?.data?.msg || 'Delete failed');
     }
   };
 
-  const handleDeleteExam = async (examId, subject) => {
-    if (!window.confirm(`Delete ${subject} exam? This will also delete all its study blocks.`)) return;
+  const toggleRole = async (id, currentRole) => {
+    const newRole = currentRole === 'admin'? 'user' : 'admin';
     try {
-      await API.delete(`/exams/${examId}`);
-      await fetchData();
-      toast.success('Exam deleted');
+      await API.patch(`/admin/user/${id}/role`, { role: newRole });
+      toast.success(`User role changed to ${newRole}`);
+      fetchAdminData();
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to delete exam');
+      toast.error('Failed to update role');
     }
   };
 
-  const updateConfidence = async (subject, level) => {
-    try {
-      await API.patch('/schedule/user/confidence', { subject, level });
-      toast.success('Confidence updated');
-      fetchData();
-    } catch {
-      toast.error('Failed to update');
-    }
-  };
-
-  const logTime = async () => {
-    if (!loggingBlock ||!actualMinutes) return toast.error('Enter minutes');
-    try {
-      await API.post('/schedule/log', {
-        blockId: loggingBlock._id,
-        actualMinutes: parseInt(actualMinutes)
-      });
-      toast.success('Time logged');
-      setLoggingBlock(null);
-      setActualMinutes('');
-      fetchData();
-    } catch {
-      toast.error('Failed to log time');
-    }
-  };
-
-  const getStatusPieData = () => {
-    if (!stats) return [];
-    return [
-      { name: 'Completed', value: stats.completed },
-      { name: 'Remaining', value: stats.remaining },
-      { name: 'Missed', value: stats.missed }
-    ].filter(d => d.value > 0);
-  };
-
-const getSubjectBarData = () => {
-  if (!Array.isArray(stats?.bySubject)) return [];
-  return stats.bySubject.map(s => ({
-    subject: s._id,
-    completed: s.completed,
-    total: s.total,
-    percentage: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0
-  }));
-};
-
-  const getDailyHoursData = () => {
-    const dailyMap = {};
-    blocks.forEach(b => {
-      if (b.isBreak) return;
-      const date = new Date(b.date).toLocaleDateString('en-CA');
-      if (!dailyMap[date]) dailyMap[date] = { date, hours: 0 };
-      dailyMap[date].hours += b.duration / 60;
-    });
-
-    return Object.values(dailyMap)
-   .sort((a, b) => new Date(a.date) - new Date(b.date))
-   .slice(-7)
-   .map(d => ({...d, hours: Number(d.hours.toFixed(1)) }));
-  };
-
-  const getCurrentWeekHours = () => {
-    const now = new Date();
-    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-    weekStart.setHours(0,0,0,0);
-
-    return blocks
-     .filter(b =>!b.isBreak && new Date(b.date) >= weekStart)
-     .reduce((sum, b) => sum + b.duration / 60, 0);
-  };
-
-  const isHeavyWeek = getCurrentWeekHours() >= HEAVY_WEEK_THRESHOLD;
-
-  const getRingColorClass = (pct) => pct >= 80? 'ring-high' : pct >= 50? 'ring-mid' : 'ring-low';
-  const getScoreClass = (readiness) => readiness >= 70? 'high' : readiness >= 40? 'mid' : 'low';
-
-  if (loading) return (
-    <div className="dash-container">
-      <div className="dash-loading">
-        <RefreshCw className="dash-spin" size={32} />
-        <p>Loading your dashboard...</p>
+  if (loading) return <div className="admin-loading">Loading admin dashboard...</div>;
+  
+  if (error) return (
+    <div className="admin-container">
+      <div className="admin-error">
+        <Shield size={48} />
+        <h2>Access Denied</h2>
+        <p>{error}</p>
+        <button onClick={() => navigate('/agenda')} className="btn-back">
+          Back to Dashboard
+        </button>
       </div>
     </div>
   );
-  if (!stats) return null;
-
-  const hasData = stats && stats.total > 0;
 
   return (
-    <div className="dash-container">
+    <div className="admin-container">
       <Toaster position="top-right" />
-
-      {affirmation && isHeavyWeek && (
-        <div className="dash-affirmation">
-          <Sparkles size={24} />
-          <p className="dash-quote">"{affirmation}"</p>
+      
+      <div className="admin-header">
+        <div className="admin-title-row">
+          <Shield size={32} />
+          <h1 className="admin-title">System Monitor</h1>
+          <span className={`status-badge ${health?.status === 'ok'? 'status-ok' : 'status-error'}`}>
+            {health?.status === 'ok'? 'Online' : 'Degraded'}
+          </span>
         </div>
-      )}
-
-      <div className="dash-header">
-        <div>
-          <h2 className="dash-title">Dashboard</h2>
-          <p className="dash-subtitle">Track your progress and stay on top of exams</p>
-        </div>
+        <button 
+          onClick={fetchAdminData} 
+          className="btn-refresh"
+          disabled={refreshing}
+        >
+          <RefreshCw size={18} className={refreshing? 'spinning' : ''} />
+          Refresh
+        </button>
       </div>
 
-      {exams.length > 0 && (
-        <div className="dash-section">
-          <h3 className="dash-section-title">
-            <Calendar size={20} />
-            Your Exams
-          </h3>
-          <div className="dash-exams-grid">
-            {exams.map(exam => (
-              <div key={exam._id} className="dash-exam-card">
-                <div className="dash-exam-header">
-                  <div>
-                    <div className="dash-exam-subject">{exam.subject}</div>
-                    <div className="dash-exam-date">
-                      <Calendar size={14} />
-                      {new Date(exam.examDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
-                    <div className="dash-exam-meta">
-                      <BookOpen size={14} />
-                      {Array.isArray(exam.syllabusTopics)
-                     ? exam.syllabusTopics.map(t => typeof t === 'string'? t : t.name).join(', ')
-                        : ''}
-                    </div>
-                    {exam.totalScheduledHours && (
-                      <div className="dash-exam-progress">
-                        <div className="dash-progress-bar-mini">
-                          <div
-                            className="dash-progress-fill-mini"
-                            style={{ width: `${Math.round((exam.completedHours / exam.totalScheduledHours) * 100)}%` }}
-                          ></div>
-                        </div>
-                        <span>{exam.completedHours || 0}h / {exam.totalScheduledHours}h</span>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleDeleteExam(exam._id, exam.subject)}
-                    className="dash-btn-delete"
-                    title="Delete exam"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="admin-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'overview'? 'active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          Overview
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'users'? 'active' : ''}`}
+          onClick={() => setActiveTab('users')}
+        >
+          Users ({metrics?.users?.total || 0})
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'otps'? 'active' : ''}`}
+          onClick={() => setActiveTab('otps')}
+        >
+          OTP Logs ({metrics?.otps?.active || 0})
+        </button>
+      </div>
 
-      <button
-        className="dash-btn-generate"
-        onClick={() => setShowDateModal(true)}
-        disabled={generating || exams.length === 0}
-      >
-        <Zap size={20} />
-        {generating? 'Generating...' : 'Generate Study Schedule'}
-      </button>
-
-      {showDateModal && (
-        <div className="dash-modal-overlay">
-          <div className="dash-modal">
-            <h3 className="dash-modal-title">
-              <Calendar size={24} />
-              When should we start?
-            </h3>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-              className="dash-modal-input"
-            />
-            <div className="dash-modal-actions">
-              <button
-                onClick={generateSchedule}
-                disabled={generating}
-                className="dash-btn-primary"
-              >
-                {generating? 'Generating...' : startDate? 'Start from this date' : 'Start tomorrow'}
-              </button>
-              <button
-                onClick={() => { setShowDateModal(false); setStartDate(''); }}
-                className="dash-btn-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!hasData? (
-        <div className="dash-empty">
-          <Target size={48} />
-          <h3>No study data yet</h3>
-          <p>Add exams and click "Generate Study Schedule" to get started</p>
-        </div>
-      ) : (
+      {activeTab === 'overview' && (
         <>
-          {progressData.length > 0 && (
-            <div className="dash-section">
-              <h3 className="dash-section-title">
-                <TrendingUp size={20} />
-                Subject Progress Rings
-              </h3>
-              <div className="dash-rings-grid">
-                {progressData.map(p => (
-                  <div key={p.subject} className="dash-ring-item">
-                    <div className={`dash-ring ${getRingColorClass(p.percentComplete)}`} style={{ '--percent': `${p.percentComplete}%` }}>
-                      <div className="dash-ring-inner">
-                        <span className="dash-percent">{p.percentComplete}%</span>
-                      </div>
-                    </div>
-                    <p className="dash-ring-label">{p.subject}</p>
-                    <p className="dash-ring-sub">Planned: {p.hoursPlanned}h</p>
-                    <p className="dash-ring-sub actual">Actual: {p.hoursActual}h</p>
-                  </div>
-                ))}
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon stat-server">
+                <Server size={24} />
+              </div>
+              <div className="stat-content">
+                <p className="stat-label">DB Status</p>
+                <p className="stat-value">{health?.db || 'unknown'}</p>
+                <p className="stat-sub">Uptime: {health?.uptime || 0}m</p>
               </div>
             </div>
-          )}
 
-          {readiness.length > 0 && (
-            <div className="dash-section">
-              <h3 className="dash-section-title">
-                <Target size={20} />
-                Confidence Tracker & Readiness Score
-              </h3>
-              {readiness.map(r => (
-                <div key={r.subject} className="dash-readiness-card">
-                  <div className="dash-readiness-header">
-                    <span className="dash-readiness-subject">{r.subject}</span>
-                    <span className={`dash-score ${getScoreClass(r.readiness)}`}>
-                      {r.readiness}%
-                    </span>
-                  </div>
-                  <div className="dash-readiness-bar">
-                    <div className="dash-bar-fill" style={{ width: `${r.readiness}%` }}></div>
-                  </div>
-                  <div className="dash-confidence-slider">
-                    <label>Confidence: {r.confidence}/10</label>
-                    <input
-                      type="range" min="1" max="10" value={r.confidence}
-                      onChange={(e) => updateConfidence(r.subject, parseInt(e.target.value))}
-                    />
-                  </div>
-                  <div className="dash-readiness-stats">
-                    <span><Clock size={14} /> {r.daysLeft} days left</span>
-                    <span>Completion: {r.completionScore}%</span>
-                    <span>Confidence: {r.confidenceScore}%</span>
-                  </div>
-                </div>
-              ))}
+            <div className="stat-card">
+              <div className="stat-icon stat-cpu">
+                <Cpu size={24} />
+              </div>
+              <div className="stat-content">
+                <p className="stat-label">CPU Load</p>
+                <p className="stat-value">{health?.cpu || 0}</p>
+                <p className="stat-sub">Node {health?.nodeVersion}</p>
+              </div>
             </div>
-          )}
 
-          <div className="dash-stats-grid">
-            <div className="dash-stat-card total">
-              <div className="dash-stat-icon"><BookOpen size={24} /></div>
-              <h3>{stats.total}</h3>
-              <p>Total Blocks</p>
+            <div className="stat-card">
+              <div className="stat-icon stat-memory">
+                <HardDrive size={24} />
+              </div>
+              <div className="stat-content">
+                <p className="stat-label">Memory</p>
+                <p className="stat-value">{health?.memory?.used || 0} MB</p>
+                <p className="stat-sub">Heap used</p>
+              </div>
             </div>
-            <div className="dash-stat-card green">
-              <div className="dash-stat-icon"><CheckCircle2 size={24} /></div>
-              <h3>{stats.completed}</h3>
-              <p>Completed</p>
+
+            <div className="stat-card">
+              <div className="stat-icon stat-users">
+                <Users size={24} />
+              </div>
+              <div className="stat-content">
+                <p className="stat-label">Active Users</p>
+                <p className="stat-value">{metrics?.users?.active24h || 0}</p>
+                <p className="stat-sub">Last 24h / {metrics?.users?.total || 0} total</p>
+              </div>
             </div>
-            <div className="dash-stat-card red">
-              <div className="dash-stat-icon"><AlertCircle size={24} /></div>
-              <h3>{stats.missed}</h3>
-              <p>Missed</p>
+
+            <div className="stat-card">
+              <div className="stat-icon stat-blocks">
+                <Activity size={24} />
+              </div>
+              <div className="stat-content">
+                <p className="stat-label">Blocks Today</p>
+                <p className="stat-value">{metrics?.blocks?.completedToday || 0}</p>
+                <p className="stat-sub">{metrics?.blocks?.overdue || 0} overdue</p>
+              </div>
             </div>
-            <div className="dash-stat-card blue">
-              <div className="dash-stat-icon"><Clock size={24} /></div>
-              <h3>{stats.remaining}</h3>
-              <p>Remaining</p>
-            </div>
-            <div className="dash-stat-card purple">
-              <div className="dash-stat-icon"><TrendingUp size={24} /></div>
-              <h3>{stats.completionRate}%</h3>
-              <p>Completion Rate</p>
+
+            <div className="stat-card">
+              <div className="stat-icon stat-errors">
+                <AlertTriangle size={24} />
+              </div>
+              <div className="stat-content">
+                <p className="stat-label">System Errors</p>
+                <p className="stat-value">{(errors?.cronFailures || 0) + (errors?.schedulerFailures || 0)}</p>
+                <p className="stat-sub">Cron: {errors?.cronFailures || 0} | Sched: {errors?.schedulerFailures || 0}</p>
+              </div>
             </div>
           </div>
 
-          <div className="dash-charts-grid">
-            <div className="dash-chart-card">
-              <h3 className="dash-chart-title">Study Status</h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie data={getStatusPieData()} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
-                    {getStatusPieData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.name === 'Completed'? '#10b981' : entry.name === 'Missed'? '#ef4444' : '#667eea'} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          <div className="error-section">
+            <h2 className="section-title">Error Breakdown</h2>
+            <div className="error-grid">
+              <div className="error-card">
+                <h3>Cron Failures</h3>
+                <p className="error-count">{errors?.cronFailures || 0}</p>
+                <p className="error-desc">Overdue blocks not rescheduled &gt; 1h</p>
+              </div>
+              <div className="error-card">
+                <h3>Scheduler Failures</h3>
+                <p className="error-count">{errors?.schedulerFailures || 0}</p>
+                <p className="error-desc">Topics with 10h+ unscheduled</p>
+              </div>
             </div>
-
-            <div className="dash-chart-card">
-              <h3 className="dash-chart-title">Hours Per Day - Last 7 Days</h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={getDailyHoursData()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="date" tickFormatter={(d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="hours" fill="url(#colorGradient)" radius={[8, 8, 0, 0]} />
-                  <defs>
-                    <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#667eea" />
-                      <stop offset="100%" stopColor="#764ba2" />
-                    </linearGradient>
-                  </defs>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="dash-subject-chart">
-            <h3 className="dash-chart-title">Study Log History - Planned vs Actual</h3>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={getSubjectBarData()} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" domain={[0, 'dataMax']} />
-                <YAxis dataKey="subject" type="category" width={100} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="completed" fill="#10b981" name="Completed" radius={[0, 8, 8, 0]} />
-                <Bar dataKey="total" fill="#e5e7eb" name="Total" radius={[0, 8, 8, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="dash-section">
-            <h3 className="dash-section-title">
-              <Clock size={20} />
-              Recent Study Blocks - Log Actual Time
-            </h3>
-            <div className="dash-blocks-list">
-              {blocks.filter(b =>!b.isBreak && b.completed).slice(-5).reverse().map(block => (
-                <div key={block._id} className="dash-block-log">
-                  <div>
-                    <div className="dash-block-title">{block.subject} - {block.topic}</div>
-                    <div className="dash-block-meta">
-                      {new Date(block.date).toLocaleDateString()} | Planned: {block.duration}min |
-                      <span className={block.actualDuration? 'dash-actual-set' : 'dash-actual-missing'}>
-                        Actual: {block.actualDuration || 0}min
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setLoggingBlock(block)}
-                    className="dash-btn-log"
-                  >
-                    {block.actualDuration? 'Update' : 'Log Time'}
-                  </button>
-                </div>
-              ))}
-            </div>
+            <p className="last-checked">Last checked: {new Date(errors?.lastChecked).toLocaleTimeString()}</p>
           </div>
         </>
       )}
 
-      {loggingBlock && (
-        <div className="dash-modal-overlay">
-          <div className="dash-modal">
-            <h3 className="dash-modal-title">
-              <Clock size={24} />
-              Log Actual Study Time
-            </h3>
-            <p className="dash-modal-sub">{loggingBlock.subject} - {loggingBlock.topic}</p>
-            <p className="dash-modal-info">Planned: {loggingBlock.duration} minutes</p>
-            <input
-              type="number"
-              placeholder="Actual minutes spent"
-              value={actualMinutes}
-              onChange={(e) => setActualMinutes(e.target.value)}
-              className="dash-modal-input"
-              autoFocus
-            />
-            <div className="dash-modal-actions">
-              <button onClick={logTime} className="dash-btn-primary">Save</button>
-              <button onClick={() => { setLoggingBlock(null); setActualMinutes(''); }} className="dash-btn-secondary">
-                Cancel
-              </button>
-            </div>
-          </div>
+      {activeTab === 'users' && (
+        <div className="admin-table-wrapper">
+          <h2 className="section-title">All Users</h2>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u._id}>
+                  <td>{u.email}</td>
+                  <td>{u.username}</td>
+                  <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
+                  <td>{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td className="actions">
+                    <button onClick={() => toggleRole(u._id, u.role)} className="btn-small">
+                      {u.role === 'admin'? 'Demote' : 'Promote'}
+                    </button>
+                    {u.role!== 'admin' && 
+                      <button onClick={() => deleteUser(u._id, u.email)} className="btn-small danger">
+                        <Trash2 size={14} />
+                      </button>
+                    }
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <button className="dash-btn-refresh" onClick={fetchData} disabled={loading}>
-        <RefreshCw size={18} className={loading? 'dash-spin' : ''} />
-        {loading? 'Refreshing...' : 'Refresh'}
-      </button>
+      {activeTab === 'otps' && (
+        <div className="admin-table-wrapper">
+          <h2 className="section-title">Recent OTPs - Debug SendGrid</h2>
+          <p className="section-desc">Use this to see generated OTPs when Gmail blocks emails</p>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Type</th>
+                <th>OTP Code</th>
+                <th>Created</th>
+                <th>Expires</th>
+              </tr>
+            </thead>
+            <tbody>
+              {otps.map(o => (
+                <tr key={o._id}>
+                  <td>{o.email}</td>
+                  <td><span className={`type-badge ${o.type}`}>{o.type}</span></td>
+                  <td><code className="otp-code">{o.otp}</code></td>
+                  <td>{new Date(o.createdAt).toLocaleString()}</td>
+                  <td>{new Date(o.expiresAt).toLocaleTimeString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

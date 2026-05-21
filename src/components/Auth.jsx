@@ -272,23 +272,27 @@ const Auth = () => {
           />
         )}
 
-        {(mode === 'verify' || mode === 'reset') && (
-          <>
-            <input
-              type="text" name="otp" placeholder="6-digit OTP"
-              value={otp} onChange={onChange} maxLength="6" required
-            />
-            <button 
-              type="button" 
-              onClick={mode === 'verify'? handleResendRegisterOtp : handleResendResetOtp}
-              disabled={resendLoading}
-              className="btn-link"
-              style={{ marginTop: '8px' }}
-            >
-              {resendLoading? 'Sending...' : 'Resend OTP'}
-            </button>
-          </>
-        )}
+ {(mode === 'verify' || mode === 'reset') && (
+  <>
+    <input
+      type="text" 
+      name="otp" 
+      placeholder="6-digit OTP"
+      value={otp} 
+      onChange={onChange} 
+      maxLength="6" 
+      required
+    />
+    <button 
+      type="button" 
+      onClick={mode === 'verify'? handleResendRegisterOtp : handleResendResetOtp}
+      disabled={resendLoading}
+      className="resend-otp-btn"
+    >
+      {resendLoading? 'Sending...' : 'Resend OTP'}
+    </button>
+  </>
+)}
 
         <button type="submit" disabled={submitLoading}>
           {submitLoading? 'Processing...' :
