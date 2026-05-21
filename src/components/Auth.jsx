@@ -92,23 +92,30 @@ const Auth = () => {
   };
 
   return (
-    <div className="auth-container">
-      <h2>{isLogin? 'Login' : 'Register'}</h2>
-      {error && <p className="error-msg">{error}</p>}
-      <form onSubmit={handleSubmit} className="auth-form">
-        {!isLogin && (
-          <input type="text" name="name" placeholder="Name" value={name} onChange={onChange} required />
-        )}
-        <input type="email" name="email" placeholder="Email" value={email} onChange={onChange} required />
-        <input type="password" name="password" placeholder={isLogin? 'Password' : 'Password - 8+ chars, 1 upper, 1 number, 1 special'} value={password} onChange={onChange} required />
-        <button type="submit" disabled={submitLoading}>
-          {submitLoading? 'Processing...' : isLogin? 'Login' : 'Register'}
-        </button>
-      </form>
-      <button className="toggle-auth" onClick={() => { setIsLogin(!isLogin); setError(''); }}>
-        {isLogin? 'Need to register?' : 'Already have account?'}
-      </button>
-    </div>
+<div className="auth-container">
+  <h2>{isLogin? 'Login' : 'Register'}</h2>
+  {error && <p className="error-msg">{error}</p>}
+  
+  <form onSubmit={handleSubmit} className="auth-form">
+    {!isLogin && (
+      <input type="text" name="name" placeholder="Name" value={name} onChange={onChange} required />
+    )}
+    <input type="email" name="email" placeholder="Email" value={email} onChange={onChange} required />
+    <input type="password" name="password" placeholder={isLogin? 'Password' : 'Password - 8+ chars, 1 upper, 1 number, 1 special'} value={password} onChange={onChange} required />
+    
+    <button type="submit" disabled={submitLoading}>
+      {submitLoading? 'Processing...' : isLogin? 'Login' : 'Register'}
+    </button>
+
+    <button 
+      type="button"
+      className="toggle-auth register-link" 
+      onClick={() => { setIsLogin(!isLogin); setError(''); }}
+    >
+      {isLogin? 'Need to register?' : 'Already have account?'}
+    </button>
+  </form>
+</div>
   );
 }
 

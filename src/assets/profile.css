@@ -1,28 +1,32 @@
 .profile-container {
-  padding: 24px;
+  padding: 32px 24px;
   max-width: 700px;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(180deg, var(--slate-50) 0%, #ffffff 200px);
+  min-height: 100vh;
 }
 
 .profile-container h2 {
   margin: 0 0 32px;
   font-size: 36px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, var(--red-600) 0%, var(--purple-600) 50%, var(--blue-600) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
 .security-btn-group {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .email-otp-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .email-input-flex {
@@ -32,23 +36,25 @@
 .profile-loading {
   text-align: center;
   padding: 80px 20px;
-  color: #64748b;
+  color: var(--slate-500);
   font-size: 16px;
+  font-weight: 600;
 }
 
 .profile-card {
   background: white;
-  border: 2px solid #e2e8f0;
+  border: 1px solid var(--slate-100);
   border-radius: 20px;
-  padding: 28px;
+  padding: 32px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  transition: all 0.3s;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .profile-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .profile-header {
@@ -58,124 +64,141 @@
 }
 
 .profile-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--indigo-500), var(--purple-600));
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
-  box-shadow: 0 8px 16px -4px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.35);
+  flex-shrink: 0;
 }
 
 .profile-header h3 {
   margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--slate-900);
+  letter-spacing: -0.5px;
 }
 
 .profile-email {
   margin: 0;
-  color: #64748b;
+  color: var(--slate-500);
   font-size: 15px;
+  font-weight: 500;
 }
 
 .stat-value {
   display: block;
-  font-size: 36px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-size: 40px;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--indigo-500), var(--purple-600));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 6px;
+  letter-spacing: -1px;
 }
 
 .stat-label {
   display: block;
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 600;
+  font-size: 12px;
+  color: var(--slate-500);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 .password-card {
   background: white;
-  border: 2px solid #e2e8f0;
+  border: 1px solid var(--slate-100);
   border-radius: 20px;
-  padding: 28px;
+  padding: 32px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .password-card h3 {
-  margin: 0 0 20px;
+  margin: 0 0 24px;
   font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 800;
+  color: var(--slate-900);
+  letter-spacing: -0.5px;
 }
 
 .password-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
 .password-form label {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   font-size: 14px;
-  font-weight: 600;
-  color: #475569;
+  font-weight: 700;
+  color: var(--slate-700);
 }
 
 .password-form input {
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
+  padding: 14px 18px;
+  border: 2px solid var(--slate-100);
+  border-radius: 12px;
   font-size: 15px;
+  font-weight: 500;
   width: 100%;
   box-sizing: border-box;
-  transition: all 0.2s;
-  background: #f8fafc;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--slate-50);
+  color: var(--slate-900);
+}
+
+.password-form input::placeholder {
+  color: var(--slate-500);
+  font-weight: 400;
 }
 
 .password-form input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--indigo-500);
   background: white;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--ring);
+  transform: translateY(-2px);
 }
 
 .profile-actions {
   display: flex;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .btn-primary {
   flex: 1;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--indigo-500), var(--purple-600));
   color: white;
   border: none;
-  padding: 12px 20px;
-  border-radius: 10px;
+  padding: 14px 20px;
+  border-radius: 12px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 15px;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
@@ -186,20 +209,22 @@
 
 .btn-secondary {
   background: white;
-  color: #475569;
-  border: 2px solid #e2e8f0;
-  padding: 10px 20px;
-  border-radius: 10px;
+  color: var(--slate-700);
+  border: 2px solid var(--slate-100);
+  padding: 12px 20px;
+  border-radius: 12px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 15px;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--slate-50);
+  border-color: var(--slate-300);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-secondary:disabled {
@@ -209,50 +234,63 @@
 
 .export-card {
   background: white;
-  border: 2px solid #e2e8f0;
+  border: 1px solid var(--slate-100);
   border-radius: 20px;
-  padding: 28px;
+  padding: 32px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .export-card h3 {
-  margin: 0 0 20px;
+  margin: 0 0 24px;
   font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 800;
+  color: var(--slate-900);
+  letter-spacing: -0.5px;
 }
 
 .btn-logout {
   width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  padding: 16px;
+  background: linear-gradient(135deg, var(--red-500), var(--red-600));
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 16px;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3);
 }
 
 .btn-logout:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(239, 68, 68, 0.4);
 }
 
 @media (max-width: 640px) {
   .profile-container {
-    padding: 16px;
+    padding: 20px 16px;
   }
   
   .profile-container h2 {
     font-size: 28px;
   }
   
-  .stats-grid {
-    grid-template-columns: 1fr;
+  .profile-card,
+  .password-card,
+  .export-card {
+    padding: 24px;
+  }
+  
+  .profile-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 26px;
+  }
+  
+  .profile-header h3 {
+    font-size: 20px;
   }
   
   .profile-actions {
@@ -261,5 +299,13 @@
   
   .btn-primary, .btn-secondary {
     width: 100%;
+  }
+  
+  .security-btn-group {
+    flex-direction: column;
+  }
+  
+  .email-otp-row {
+    flex-direction: column;
   }
 }

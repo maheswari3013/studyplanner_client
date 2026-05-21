@@ -1,61 +1,71 @@
+/* Header.css - uses global :root from variables.css */
+
 .navbar-pro {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid var(--slate-100);
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
-  height: 72px;
+  height: 76px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 40px;
 }
 
+/* Logo */
 .nav-logo-pro {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-decoration: none;
-  transition: transform 0.2s;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-logo-pro:hover {
-  transform: scale(1.05);
+  transform: scale(1.05) translateY(-2px);
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, var(--indigo-500), var(--purple-600));
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.35);
+  transition: all 0.3s;
+}
+
+.nav-logo-pro:hover .logo-icon {
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.45);
+  transform: rotate(-8deg);
 }
 
 .logo-text {
-  font-size: 22px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, var(--red-600) 0%, var(--purple-600) 50%, var(--blue-600) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: -0.5px;
 }
 
+/* Nav Links */
 .nav-links {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   justify-content: center;
 }
@@ -64,111 +74,148 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
-  border-radius: 10px;
-  color: #64748b;
+  padding: 12px 18px;
+  border-radius: 12px;
+  color: var(--slate-500);
   text-decoration: none;
   font-size: 14px;
-  font-weight: 600;
-  transition: all 0.25s;
+  font-weight: 700;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  border: 1px solid transparent;
 }
 
 .nav-link-pro:hover {
-  background: #f1f5f9;
-  color: var(--accent);
-  transform: translateY(-1px);
+  background: var(--slate-50);
+  color: var(--indigo-500);
+  transform: translateY(-2px);
+  border-color: var(--slate-100);
 }
 
 .nav-link-pro.active {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--indigo-500), var(--purple-600));
   color: white;
-  box-shadow: 0 4px 12px -2px var(--accent);
+  box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+}
+
+.nav-link-pro.active:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -4px rgba(99, 102, 241, 0.5);
 }
 
 .nav-link-pro.active::after {
   content: '';
   position: absolute;
-  bottom: -20px;
+  bottom: -22px;
   left: 50%;
   transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
+  width: 8px;
+  height: 8px;
+  background: var(--indigo-500);
   border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9);
 }
 
+/* User Section */
 .nav-user {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 12px 6px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  padding: 8px 14px 8px 8px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--slate-100);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s;
+}
+
+.nav-user:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--indigo-500), var(--purple-600));
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 16px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  flex-shrink: 0;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 2px;
 }
 
 .nav-username {
   font-size: 14px;
-  color: #1e293b;
-  font-weight: 600;
+  color: var(--slate-900);
+  font-weight: 700;
   line-height: 1.2;
 }
 
 .nav-role {
   font-size: 11px;
-  color: #94a3b8;
-  font-weight: 500;
+  color: var(--slate-500);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  padding: 2px 8px;
+  background: var(--slate-100);
+  border-radius: 6px;
 }
 
 .btn-logout-pro {
-  padding: 8px;
+  padding: 10px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  color: #64748b;
+  color: var(--slate-500);
   display: flex;
   align-items: center;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-logout-pro:hover {
-  background: #fee2e2;
-  color: #dc2626;
-  transform: rotate(-12deg);
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: var(--red-600);
+  transform: rotate(-15deg) scale(1.1);
 }
 
+.btn-logout-pro:active {
+  transform: rotate(-15deg) scale(0.95);
+}
+
+.btn-logout-pro:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* Responsive */
 @media (max-width: 1024px) {
   .nav-link-pro span { display: none; }
-  .nav-link-pro { padding: 10px; }
+  .nav-link-pro { padding: 12px; }
+  .nav-links { gap: 4px; }
 }
 
 @media (max-width: 768px) {
-  .nav-container { gap: 16px; padding: 0 16px; }
+  .nav-container { 
+    gap: 16px; 
+    padding: 0 16px; 
+    height: 68px;
+  }
   .user-info { display: none; }
-  .nav-links { gap: 2px; }
   .logo-text { display: none; }
+  .nav-links { gap: 2px; }
+  .nav-user { padding: 6px; }
 }
