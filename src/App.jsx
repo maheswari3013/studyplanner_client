@@ -122,7 +122,7 @@ function App() {
                 <AdminDashboard />
               </AdminRoute>
             } />
-
+              
             <Route path="/" element={<Navigate to={user? "/agenda" : "/auth"} />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

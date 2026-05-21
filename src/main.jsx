@@ -28,7 +28,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <ColorProvider>
         <AuthProvider>
           <ScheduleProvider>
-            <App />
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
           </ScheduleProvider>
         </AuthProvider>
       </ColorProvider>

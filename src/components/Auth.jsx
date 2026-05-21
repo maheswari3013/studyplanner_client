@@ -73,9 +73,16 @@ const Auth = () => {
 
     setSubmitLoading(true);
     try {
-      await API.post('/auth/register', { username, email, password });
-      setMode('verify');
-      toast.success('OTP sent to your email. Check spam too.');
+      const res = await API.post('/auth/register', { username, email, password });
+
+      if (res.data.devMode && res.data.otp) {
+        setFormData({...formData, otp: res.data.otp });
+        setMode('verify');
+        toast.success(`Email service down. Use this OTP: ${res.data.otp}`, { duration: 8000 });
+      } else {
+        setMode('verify');
+        toast.success(res.data.msg || 'OTP sent to your email. Check spam too.');
+      }
     } catch (err) {
       const msg = err.response?.data?.msg || 'Failed to send OTP';
       setError(msg);
@@ -91,7 +98,7 @@ const Auth = () => {
     setSubmitLoading(true);
     try {
       const res = await API.post('/auth/verify-register', { email, otp });
-      const { token, user } = res.data; // FIXED: backend returns { token, user } directly
+      const { token, user } = res.data;
 
       if (!token ||!user) throw new Error('Invalid response');
 
@@ -113,7 +120,7 @@ const Auth = () => {
     setSubmitLoading(true);
     try {
       const res = await API.post('/auth/login', { email, password });
-      const { token, user } = res.data; // FIXED: backend returns { token, user } directly
+      const { token, user } = res.data;
 
       if (!token ||!user) throw new Error('Invalid response from server');
 
@@ -134,9 +141,16 @@ const Auth = () => {
     setError('');
     setSubmitLoading(true);
     try {
-      await API.post('/auth/forgot-password', { email });
-      setMode('reset');
-      toast.success('Reset OTP sent to your email');
+      const res = await API.post('/auth/forgot-password', { email });
+
+      if (res.data.devMode && res.data.otp) {
+        setFormData({...formData, otp: res.data.otp });
+        setMode('reset');
+        toast.success(`Email service down. Use this OTP: ${res.data.otp}`, { duration: 8000 });
+      } else {
+        setMode('reset');
+        toast.success(res.data.msg || 'Reset OTP sent to your email');
+      }
     } catch (err) {
       const msg = err.response?.data?.msg || 'Failed to send OTP';
       setError(msg);
@@ -268,7 +282,7 @@ const Auth = () => {
         {(mode === 'verify' || mode === 'forgot' || mode === 'reset') && (
           <button
             type="button" className="toggle-auth"
-            onClick={() => { setMode('login'); setError(''); setFormData({...formData, otp: '' }); }} // FIXED: use setFormData
+            onClick={() => { setMode('login'); setError(''); setFormData({...formData, otp: '' }); }}
           >
             Back to Login
           </button>
