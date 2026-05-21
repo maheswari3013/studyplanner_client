@@ -18,7 +18,6 @@ const validatePassword = (password) => {
   return '';
 };
 
-// Convert VAPID key for push subscription
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -27,7 +26,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export default function Profile() {
-  const { user, logout, updateUser, token } = useContext(AuthContext); // Added token here
+  const { user, logout, updateUser, token } = useContext(AuthContext);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -37,15 +36,18 @@ export default function Profile() {
     confirmPassword: ''
   });
 
+  // Email change flow states
   const [newEmail, setNewEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [sentOtp, setSentOtp] = useState('');
+  const [emailChangeStep, setEmailChangeStep] = useState(0); // 0=init, 1=verifyOld, 2=verifyNew
+  const [oldEmailOtp, setOldEmailOtp] = useState('');
+  const [sentOldOtp, setSentOldOtp] = useState('');
+  const [newEmailOtp, setNewEmailOtp] = useState('');
+  const [sentNewOtp, setSentNewOtp] = useState('');
   const [otpExpiry, setOtpExpiry] = useState(null);
   const [otpLoading, setOtpLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [notifStatus, setNotifStatus] = useState('checking'); // New
+  const [notifStatus, setNotifStatus] = useState('checking');
 
-  // Check if already subscribed
   useEffect(() => {
     const checkSubscription = async () => {
       if ('serviceWorker' in navigator) {
@@ -56,6 +58,16 @@ export default function Profile() {
     };
     checkSubscription();
   }, []);
+
+  const resetEmailFlow = () => {
+    setEmailChangeStep(0);
+    setNewEmail('');
+    setOldEmailOtp('');
+    setNewEmailOtp('');
+    setSentOldOtp('');
+    setSentNewOtp('');
+    setOtpExpiry(null);
+  };
 
   const handleExport = async (type) => {
     setExporting(true);
@@ -103,7 +115,7 @@ export default function Profile() {
     }
   };
 
-  const sendOtpToNewEmail = async () => {
+  const sendOtpToOldEmail = async () => {
     if (!newEmail || newEmail === user.email) {
       alert('Enter a new email address');
       return;
@@ -112,20 +124,69 @@ export default function Profile() {
     try {
       const generatedOtp = Math.floor(100000 + Math.random() * 900000);
       const expiry = Date.now() + 15 * 60 * 1000;
-      setSentOtp(String(generatedOtp));
+      setSentOldOtp(String(generatedOtp));
       setOtpExpiry(expiry);
       const time = new Date(expiry);
       const expiryTime = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
+      
       await emailjs.send(
         import.meta.env.VITE_EMAILJS_SERVICE_ID,
         import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        { email: newEmail, otp: generatedOtp, time: expiryTime },
+        { 
+          email: user.email,
+          otp: generatedOtp, 
+          time: expiryTime,
+          name: user.name,
+          message: `Verify this change. Someone requested to change your account email to ${newEmail}. If this wasn't you, secure your account.`
+        },
         import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       );
-      alert('OTP sent to new email. Valid for 15 minutes.');
+      setEmailChangeStep(1);
+      alert('OTP sent to your current email. Please verify.');
     } catch (err) {
       console.error(err);
-      alert('Failed to send OTP');
+      alert('Failed to send OTP to current email');
+    }
+    setOtpLoading(false);
+  };
+
+  const verifyOldEmailAndSendNew = async () => {
+    if (!sentOldOtp || oldEmailOtp!== sentOldOtp) {
+      alert('Invalid OTP for current email');
+      return;
+    }
+    if (Date.now() > otpExpiry) {
+      alert('OTP expired. Start over.');
+      resetEmailFlow();
+      return;
+    }
+    
+    setOtpLoading(true);
+    try {
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000);
+      const expiry = Date.now() + 15 * 60 * 1000;
+      setSentNewOtp(String(generatedOtp));
+      setOtpExpiry(expiry);
+      const time = new Date(expiry);
+      const expiryTime = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
+      
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        { 
+          email: newEmail,
+          otp: generatedOtp, 
+          time: expiryTime,
+          name: user.name,
+          message: `Verify your new email address for StudyPlanner`
+        },
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+      );
+      setEmailChangeStep(2);
+      alert('Current email verified. OTP sent to new email.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send OTP to new email');
     }
     setOtpLoading(false);
   };
@@ -133,16 +194,19 @@ export default function Profile() {
   const handleEmailChange = async (e) => {
     e.preventDefault();
     setLoading(true);
-    if (!sentOtp || otp!== sentOtp) {
-      alert('Invalid OTP');
+    
+    if (!sentNewOtp || newEmailOtp!== sentNewOtp) {
+      alert('Invalid OTP for new email');
       setLoading(false);
       return;
     }
     if (Date.now() > otpExpiry) {
-      alert('OTP expired. Generate a new one.');
+      alert('OTP expired. Start over.');
+      resetEmailFlow();
       setLoading(false);
       return;
     }
+    
     try {
       const res = await API.patch('/auth/profile', {
         name: user.name,
@@ -151,9 +215,7 @@ export default function Profile() {
       updateUser(res.data);
       alert('Email updated successfully');
       setShowEmailForm(false);
-      setNewEmail('');
-      setOtp('');
-      setSentOtp('');
+      resetEmailFlow();
     } catch (err) {
       alert(err.response?.data?.msg || 'Update failed');
     } finally {
@@ -161,7 +223,6 @@ export default function Profile() {
     }
   };
 
-  // Fixed subscribe function
   const subscribeToNotifications = async () => {
     if (!('serviceWorker' in navigator) ||!('PushManager' in window)) {
       alert('Push notifications not supported');
@@ -179,7 +240,7 @@ export default function Profile() {
         applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_PUBLIC_VAPID_KEY)
       });
       
-      await API.post('/notifications/subscribe', subscription); // Use your axios instance
+      await API.post('/notifications/subscribe', subscription);
       setNotifStatus('enabled');
       alert('Notifications enabled! You will get study reminders.');
     } catch (err) {
@@ -222,10 +283,10 @@ export default function Profile() {
       <div className="password-card">
         <h3>Security</h3>
         <div className="security-btn-group">
-          <button onClick={() => { setShowPasswordForm(!showPasswordForm); setShowEmailForm(false); }} className="btn-secondary">
+          <button onClick={() => { setShowPasswordForm(!showPasswordForm); setShowEmailForm(false); resetEmailFlow(); }} className="btn-secondary">
             {showPasswordForm? 'Cancel' : 'Change Password'}
           </button>
-          <button onClick={() => { setShowEmailForm(!showEmailForm); setShowPasswordForm(false); }} className="btn-secondary">
+          <button onClick={() => { setShowEmailForm(!showEmailForm); setShowPasswordForm(false); resetEmailFlow(); }} className="btn-secondary">
             {showEmailForm? 'Cancel' : 'Change Email'}
           </button>
         </div>
@@ -270,42 +331,77 @@ export default function Profile() {
 
         {showEmailForm && (
           <form onSubmit={handleEmailChange} className="password-form">
-            <label>
-              New Email Address
-              <div className="email-otp-row">
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={e => setNewEmail(e.target.value)}
-                  placeholder="Enter new email"
-                  required
-                  className="email-input-flex"
-                />
-                <button
-                  type="button"
-                  onClick={sendOtpToNewEmail}
-                  disabled={otpLoading ||!newEmail}
-                  className="btn-secondary"
-                >
-                  {otpLoading? 'Sending...' : 'Send OTP'}
-                </button>
-              </div>
-            </label>
-            <label>
-              Enter OTP
-              <input
-                type="text"
-                value={otp}
-                onChange={e => setOtp(e.target.value)}
-                placeholder="6-digit OTP"
-                required
-              />
-            </label>
-            <div className="profile-actions">
-              <button type="submit" disabled={loading} className="btn-primary">
-                {loading? 'Updating...' : 'Update Email'}
-              </button>
-            </div>
+            {emailChangeStep === 0 && (
+              <label>
+                New Email Address
+                <div className="email-otp-row">
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={e => setNewEmail(e.target.value)}
+                    placeholder="Enter new email"
+                    required
+                    className="email-input-flex"
+                  />
+                  <button
+                    type="button"
+                    onClick={sendOtpToOldEmail}
+                    disabled={otpLoading ||!newEmail}
+                    className="btn-secondary"
+                  >
+                    {otpLoading? 'Sending...' : 'Verify Current'}
+                  </button>
+                </div>
+              </label>
+            )}
+
+            {emailChangeStep === 1 && (
+              <>
+                <p>OTP sent to <strong>{user.email}</strong></p>
+                <label>
+                  Enter OTP from current email
+                  <div className="email-otp-row">
+                    <input
+                      type="text"
+                      value={oldEmailOtp}
+                      onChange={e => setOldEmailOtp(e.target.value)}
+                      placeholder="6-digit OTP"
+                      required
+                      className="email-input-flex"
+                    />
+                    <button
+                      type="button"
+                      onClick={verifyOldEmailAndSendNew}
+                      disabled={otpLoading ||!oldEmailOtp}
+                      className="btn-secondary"
+                    >
+                      {otpLoading? 'Verifying...' : 'Verify'}
+                    </button>
+                  </div>
+                </label>
+              </>
+            )}
+
+            {emailChangeStep === 2 && (
+              <>
+                <p>OTP sent to <strong>{newEmail}</strong></p>
+                <label>
+                  Enter OTP from new email
+                  <input
+                    type="text"
+                    value={newEmailOtp}
+                    onChange={e => setNewEmailOtp(e.target.value)}
+                    placeholder="6-digit OTP"
+                    required
+                  />
+                </label>
+                <div className="profile-actions">
+                  <button type="submit" disabled={loading} className="btn-primary">
+                    {loading? 'Updating...' : 'Update Email'}
+                  </button>
+                </div>
+              </>
+            )}
           </form>
         )}
       </div>
