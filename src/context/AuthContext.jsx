@@ -13,7 +13,8 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         try {
-          const res = await API.get('/auth/user'); // Use API, not axios
+          const res = await API.get('/auth/user'); 
+          console.log('User from /auth/user:', res.data);
           setUser(res.data);
           setToken(storedToken);
         } catch (err) {
