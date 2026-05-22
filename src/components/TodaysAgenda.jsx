@@ -17,7 +17,6 @@ export default function TodaysAgenda() {
   const [generating, setGenerating] = useState(false);
   const [activeTimerBlock, setActiveTimerBlock] = useState(null);
 
-  // ADD THESE 2 LINES
   const [dayStartsAt, setDayStartsAt] = useState(9);
   const [dayEndsAt, setDayEndsAt] = useState(18);
 
@@ -38,7 +37,6 @@ export default function TodaysAgenda() {
     fetchToday();
   }, []);
 
-  // Check if block is overdue but not marked missed yet
   const isOverdue = (block) => {
     if (block.completed || block.missed || block.isBreak) return false;
     const now = new Date();
@@ -60,23 +58,26 @@ export default function TodaysAgenda() {
     }
   };
 
-  // FIXED: Delete + Regenerate + Refetch
+  // UPDATED: Keep missed blocks visible in red + reschedule
   const markMissed = async (id) => {
-  try {
-    const res = await API.patch(`/schedule/${id}/missed`);
-    console.log('Missed response:', res.data);
+    try {
+      // Optimistic update - turn red immediately
+      setBlocks(prev => prev.map(b => b._id === id? {...b, missed: true, completed: false } : b));
+      setActiveTimerBlock(null);
 
-    setActiveTimerBlock(null);
-    toast.success(`Block deleted. Rescheduled ${res.data.newBlocksCreated} new blocks`);
+      const res = await API.patch(`/schedule/${id}/missed`);
+      console.log('Missed response:', res.data);
 
-    await fetchToday();
+      toast.success(`Marked as missed. Rescheduled ${res.data.newBlocksCreated} new blocks`);
 
-  } catch (err) {
-    console.error('Missed error:', err.response?.data);
-    toast.error(err.response?.data?.msg || 'Failed to mark missed');
-    await fetchToday();
-  }
-};
+      await fetchToday();
+
+    } catch (err) {
+      console.error('Missed error:', err.response?.data);
+      toast.error(err.response?.data?.msg || 'Failed to mark missed');
+      await fetchToday();
+    }
+  };
 
   const markPending = async (id) => {
     try {
@@ -89,12 +90,11 @@ export default function TodaysAgenda() {
     }
   };
 
-  // NEW: Start Now - shift all future blocks
   const handleStartNow = async (id) => {
     try {
       const res = await API.post(`/schedule/${id}/start`);
       toast.success(res.data.msg);
-      await fetchToday(); // Refetch to show shifted times
+      await fetchToday();
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Failed to start');
     }
@@ -144,7 +144,7 @@ export default function TodaysAgenda() {
     }
   };
 
- const generateSchedule = async () => {
+  const generateSchedule = async () => {
     if (!confirm('This will delete your current schedule and regenerate. Continue?')) return;
     setGenerating(true);
     try {
@@ -197,7 +197,7 @@ export default function TodaysAgenda() {
         />
       )}
 
-        {showDateModal && (
+      {showDateModal && (
         <div className="modal-backdrop">
           <div className="modal">
             <h3>Generate New Schedule</h3>
@@ -211,7 +211,6 @@ export default function TodaysAgenda() {
               min={new Date().toISOString().split('T')[0]}
             />
 
-            {/* ADD THESE 2 FIELDS */}
             <label>Day starts at (0-23):</label>
             <input
               type="number"
@@ -242,6 +241,7 @@ export default function TodaysAgenda() {
           </div>
         </div>
       )}
+
       {loading? (
         <p className="loading-text">Loading...</p>
       ) : blocks.length === 0? (
@@ -267,6 +267,7 @@ export default function TodaysAgenda() {
                   </p>
                   {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
                   {overdue &&!isMissed && <span className="overdue-badge">⚠️ Overdue</span>}
+                  {isMissed && <span className="missed-badge">✗ Missed - Rescheduled</span>}
                 </div>
                 <div className="block-card-controls">
                   <button className="edit-btn" onClick={() => openEditModal(block)}>✎</button>
@@ -305,7 +306,7 @@ export default function TodaysAgenda() {
                   <>
                     <span className="status-badge missed">✗ Missed</span>
                     <button onClick={() => markPending(block._id)} className="btn-pending">
-                      <ClockIcon size={16} /> Set Pending
+                      <ClockIcon size={16} /> Undo Missed
                     </button>
                   </>
                 )}

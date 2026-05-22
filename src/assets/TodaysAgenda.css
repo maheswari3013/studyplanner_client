@@ -463,7 +463,37 @@
   .block-card {
     padding: 20px;
   }
-  
+  .block-card.missed {
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  opacity: 0.8;
+}
+
+.missed-badge {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.status-badge.missed {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.btn-pending {
+  background: #f3f4f6;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
   .block-actions {
     flex-direction: column;
   }
