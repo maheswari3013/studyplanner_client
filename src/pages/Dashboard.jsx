@@ -1,293 +1,256 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Users, Server, AlertTriangle, RefreshCw, Shield, Cpu, HardDrive, Mail, Trash2 } from 'lucide-react';
+import { Calendar, BookOpen, Clock, TrendingUp, AlertCircle, CheckCircle2, Target } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
 import toast, { Toaster } from 'react-hot-toast';
-import '../assets/AdminDashboard.css';
+import '../assets/Dashboard.css';
 
-export default function AdminDashboard() {
+export default function Dashboard() {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [health, setHealth] = useState(null);
-  const [metrics, setMetrics] = useState(null);
-  const [errors, setErrors] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [otps, setOtps] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState({
+    todayBlocks: 0,
+    completedToday: 0,
+    upcomingExams: 0,
+    totalTopics: 0,
+    studyStreak: 0
+  });
+  const [todayBlocks, setTodayBlocks] = useState([]);
+  const [upcomingExams, setUpcomingExams] = useState([]);
 
   useEffect(() => {
-    fetchAdminData();
-    const interval = setInterval(fetchAdminData, 30000);
-    return () => clearInterval(interval);
+    fetchDashboardData();
   }, []);
 
-  const fetchAdminData = async () => {
-    if (!loading) setRefreshing(true);
-    setError(null);
+  const fetchDashboardData = async () => {
     try {
-      const [healthRes, metricsRes, errorsRes, usersRes, otpsRes] = await Promise.all([
-        API.get('/admin/health'),
-        API.get('/admin/metrics'),
-        API.get('/admin/errors'),
-        API.get('/admin/users'),
-        API.get('/admin/otps')
+      setLoading(true);
+      const [blocksRes, examsRes, statsRes] = await Promise.all([
+        API.get('/blocks/today'),
+        API.get('/exams/upcoming'),
+        API.get('/user/stats')
       ]);
-      setHealth(healthRes.data);
-      setMetrics(metricsRes.data);
-      setErrors(errorsRes.data);
-      setUsers(usersRes.data);
-      setOtps(otpsRes.data);
+
+      setTodayBlocks(blocksRes.data || []);
+      setUpcomingExams(examsRes.data?.slice(0, 3) || []);
+      setStats(statsRes.data || stats);
     } catch (err) {
-      const msg = err.response?.data?.msg || 'Failed to load admin data';
-      setError(msg);
-      if (err.response?.status === 403) {
-        toast.error('Admin access required');
-        setTimeout(() => navigate('/agenda'), 1500);
-      } else {
-        toast.error(msg);
-      }
+      console.error('Dashboard fetch error:', err);
+      toast.error('Failed to load dashboard');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const deleteUser = async (id, email) => {
-    if (!confirm(`Delete user ${email}?`)) return;
+  const completeBlock = async (blockId) => {
     try {
-      await API.delete(`/admin/user/${id}`);
-      toast.success('User deleted');
-      fetchAdminData();
+      await API.patch(`/blocks/${blockId}/complete`);
+      toast.success('Block completed!');
+      fetchDashboardData();
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Delete failed');
+      toast.error('Failed to complete block');
     }
   };
 
-  const toggleRole = async (id, currentRole) => {
-    const newRole = currentRole === 'admin'? 'user' : 'admin';
-    try {
-      await API.patch(`/admin/user/${id}/role`, { role: newRole });
-      toast.success(`User role changed to ${newRole}`);
-      fetchAdminData();
-    } catch (err) {
-      toast.error('Failed to update role');
-    }
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
-  if (loading) return <div className="admin-loading">Loading admin dashboard...</div>;
-  
-  if (error) return (
-    <div className="admin-container">
-      <div className="admin-error">
-        <Shield size={48} />
-        <h2>Access Denied</h2>
-        <p>{error}</p>
-        <button onClick={() => navigate('/agenda')} className="btn-back">
-          Back to Dashboard
-        </button>
+  const getProgressPercent = () => {
+    if (stats.todayBlocks === 0) return 0;
+    return Math.round((stats.completedToday / stats.todayBlocks) * 100);
+  };
+
+  if (loading) {
+    return (
+      <div className="dashboard-loading">
+        <div className="spinner"></div>
+        <p>Loading your dashboard...</p>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="admin-container">
+    <div className="dashboard-container">
       <Toaster position="top-right" />
       
-      <div className="admin-header">
-        <div className="admin-title-row">
-          <Shield size={32} />
-          <h1 className="admin-title">System Monitor</h1>
-          <span className={`status-badge ${health?.status === 'ok'? 'status-ok' : 'status-error'}`}>
-            {health?.status === 'ok'? 'Online' : 'Degraded'}
-          </span>
+      <div className="dashboard-header">
+        <div>
+          <h1 className="dashboard-title">
+            {getGreeting()}, {user?.username || 'Student'}!
+          </h1>
+          <p className="dashboard-subtitle">
+            {new Date().toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
         </div>
-        <button 
-          onClick={fetchAdminData} 
-          className="btn-refresh"
-          disabled={refreshing}
-        >
-          <RefreshCw size={18} className={refreshing? 'spinning' : ''} />
-          Refresh
-        </button>
       </div>
 
-      <div className="admin-tabs">
-        <button 
-          className={`tab-btn ${activeTab === 'overview'? 'active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'users'? 'active' : ''}`}
-          onClick={() => setActiveTab('users')}
-        >
-          Users ({metrics?.users?.total || 0})
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'otps'? 'active' : ''}`}
-          onClick={() => setActiveTab('otps')}
-        >
-          OTP Logs ({metrics?.otps?.active || 0})
-        </button>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon stat-today">
+            <Clock size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Today's Progress</p>
+            <p className="stat-value">{stats.completedToday}/{stats.todayBlocks}</p>
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${getProgressPercent()}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon stat-exams">
+            <BookOpen size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Upcoming Exams</p>
+            <p className="stat-value">{stats.upcomingExams}</p>
+            <p className="stat-sub">Next 30 days</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon stat-topics">
+            <Target size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Active Topics</p>
+            <p className="stat-value">{stats.totalTopics}</p>
+            <p className="stat-sub">In progress</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon stat-streak">
+            <TrendingUp size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Study Streak</p>
+            <p className="stat-value">{stats.studyStreak} days</p>
+            <p className="stat-sub">Keep it up!</p>
+          </div>
+        </div>
       </div>
 
-      {activeTab === 'overview' && (
-        <>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon stat-server">
-                <Server size={24} />
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">DB Status</p>
-                <p className="stat-value">{health?.db || 'unknown'}</p>
-                <p className="stat-sub">Uptime: {health?.uptime || 0}m</p>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon stat-cpu">
-                <Cpu size={24} />
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">CPU Load</p>
-                <p className="stat-value">{health?.cpu || 0}</p>
-                <p className="stat-sub">Node {health?.nodeVersion}</p>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon stat-memory">
-                <HardDrive size={24} />
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">Memory</p>
-                <p className="stat-value">{health?.memory?.used || 0} MB</p>
-                <p className="stat-sub">Heap used</p>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon stat-users">
-                <Users size={24} />
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">Active Users</p>
-                <p className="stat-value">{metrics?.users?.active24h || 0}</p>
-                <p className="stat-sub">Last 24h / {metrics?.users?.total || 0} total</p>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon stat-blocks">
-                <Activity size={24} />
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">Blocks Today</p>
-                <p className="stat-value">{metrics?.blocks?.completedToday || 0}</p>
-                <p className="stat-sub">{metrics?.blocks?.overdue || 0} overdue</p>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon stat-errors">
-                <AlertTriangle size={24} />
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">System Errors</p>
-                <p className="stat-value">{(errors?.cronFailures || 0) + (errors?.schedulerFailures || 0)}</p>
-                <p className="stat-sub">Cron: {errors?.cronFailures || 0} | Sched: {errors?.schedulerFailures || 0}</p>
-              </div>
-            </div>
+      <div className="dashboard-content">
+        <div className="content-section">
+          <div className="section-header">
+            <h2 className="section-title">
+              <Clock size={20} />
+              Today's Study Blocks
+            </h2>
+            <button 
+              onClick={() => navigate('/agenda')} 
+              className="btn-link"
+            >
+              View All
+            </button>
           </div>
 
-          <div className="error-section">
-            <h2 className="section-title">Error Breakdown</h2>
-            <div className="error-grid">
-              <div className="error-card">
-                <h3>Cron Failures</h3>
-                <p className="error-count">{errors?.cronFailures || 0}</p>
-                <p className="error-desc">Overdue blocks not rescheduled &gt; 1h</p>
-              </div>
-              <div className="error-card">
-                <h3>Scheduler Failures</h3>
-                <p className="error-count">{errors?.schedulerFailures || 0}</p>
-                <p className="error-desc">Topics with 10h+ unscheduled</p>
-              </div>
+          {todayBlocks.length === 0 ? (
+            <div className="empty-state">
+              <CheckCircle2 size={48} />
+              <p>No blocks scheduled for today</p>
+              <button onClick={() => navigate('/calendar')} className="btn-primary">
+                Plan Your Day
+              </button>
             </div>
-            <p className="last-checked">Last checked: {new Date(errors?.lastChecked).toLocaleTimeString()}</p>
-          </div>
-        </>
-      )}
-
-      {activeTab === 'users' && (
-        <div className="admin-table-wrapper">
-          <h2 className="section-title">All Users</h2>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Joined</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u._id}>
-                  <td>{u.email}</td>
-                  <td>{u.username}</td>
-                  <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
-                  <td>{new Date(u.createdAt).toLocaleDateString()}</td>
-                  <td className="actions">
-                    <button onClick={() => toggleRole(u._id, u.role)} className="btn-small">
-                      {u.role === 'admin'? 'Demote' : 'Promote'}
+          ) : (
+            <div className="blocks-list">
+              {todayBlocks.slice(0, 5).map(block => (
+                <div key={block._id} className={`block-item ${block.completed ? 'completed' : ''}`}>
+                  <div className="block-time">
+                    {new Date(block.startTime).toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </div>
+                  <div className="block-content">
+                    <h4 className="block-title">{block.topic?.name || block.title}</h4>
+                    <p className="block-duration">{block.duration} minutes</p>
+                  </div>
+                  {!block.completed && (
+                    <button 
+                      onClick={() => completeBlock(block._id)}
+                      className="btn-complete"
+                    >
+                      <CheckCircle2 size={18} />
                     </button>
-                    {u.role!== 'admin' && 
-                      <button onClick={() => deleteUser(u._id, u.email)} className="btn-small danger">
-                        <Trash2 size={14} />
-                      </button>
-                    }
-                  </td>
-                </tr>
+                  )}
+                  {block.completed && (
+                    <div className="block-done">
+                      <CheckCircle2 size={18} />
+                    </div>
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
-      )}
 
-      {activeTab === 'otps' && (
-        <div className="admin-table-wrapper">
-          <h2 className="section-title">Recent OTPs - Debug SendGrid</h2>
-          <p className="section-desc">Use this to see generated OTPs when Gmail blocks emails</p>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Type</th>
-                <th>OTP Code</th>
-                <th>Created</th>
-                <th>Expires</th>
-              </tr>
-            </thead>
-            <tbody>
-              {otps.map(o => (
-                <tr key={o._id}>
-                  <td>{o.email}</td>
-                  <td><span className={`type-badge ${o.type}`}>{o.type}</span></td>
-                  <td><code className="otp-code">{o.otp}</code></td>
-                  <td>{new Date(o.createdAt).toLocaleString()}</td>
-                  <td>{new Date(o.expiresAt).toLocaleTimeString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="content-section">
+          <div className="section-header">
+            <h2 className="section-title">
+              <Calendar size={20} />
+              Upcoming Exams
+            </h2>
+            <button 
+              onClick={() => navigate('/exams')} 
+              className="btn-link"
+            >
+              View All
+            </button>
+          </div>
+
+          {upcomingExams.length === 0 ? (
+            <div className="empty-state">
+              <BookOpen size={48} />
+              <p>No upcoming exams</p>
+              <button onClick={() => navigate('/exams')} className="btn-primary">
+                Add Exam
+              </button>
+            </div>
+          ) : (
+            <div className="exams-list">
+              {upcomingExams.map(exam => {
+                const daysLeft = Math.ceil((new Date(exam.date) - new Date()) / (1000 * 60 * 60 * 24));
+                return (
+                  <div key={exam._id} className="exam-item">
+                    <div className="exam-date">
+                      <span className="exam-day">{new Date(exam.date).getDate()}</span>
+                      <span className="exam-month">
+                        {new Date(exam.date).toLocaleString('en-US', { month: 'short' })}
+                      </span>
+                    </div>
+                    <div className="exam-content">
+                      <h4 className="exam-title">{exam.subject}</h4>
+                      <p className="exam-desc">{exam.description || 'No description'}</p>
+                    </div>
+                    <div className={`exam-countdown ${daysLeft <= 7 ? 'urgent' : ''}`}>
+                      <AlertCircle size={16} />
+                      <span>{daysLeft}d left</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
