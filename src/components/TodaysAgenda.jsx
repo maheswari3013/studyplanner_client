@@ -252,9 +252,6 @@ export default function TodaysAgenda() {
               <div className="block-actions">
                 {isPending && isStudyOrReview && (
                   <>
-                    <button onClick={() => handleStartNow(block._id)} className="btn-start-now">
-                      <Play size={16} /> Start Now
-                    </button>
                     <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
                       ▶ Start Timer
                     </button>

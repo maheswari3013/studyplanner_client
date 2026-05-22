@@ -31,7 +31,22 @@ export default function CalendarView() {
   useEffect(() => {
     fetchData();
     checkGoogleConnection();
+    
+    const handleMessage = (event) => {
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+        toast.success('Google connected!');
+        checkGoogleConnection();
+        setSyncing(false);
+      }
+      if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+        toast.error('Google connect failed: ' + event.data.error);
+        setSyncing(false);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
+  
 
   const fetchData = async () => {
     try {
@@ -47,11 +62,14 @@ export default function CalendarView() {
     }
   };
 
+  // FIXED: Use /schedule/google/status not /auth/user
   const checkGoogleConnection = async () => {
     try {
-      const res = await API.get('/auth/user');
-      setGoogleConnected(!!res.data.googleTokens?.refresh_token);
-    } catch {}
+      const res = await API.get('/schedule/google/status');
+      setGoogleConnected(res.data.connected);
+    } catch {
+      setGoogleConnected(false);
+    }
   };
 
   const handleMarkMissed = async (blockId) => {
@@ -105,8 +123,8 @@ export default function CalendarView() {
 
       const res = await API.get('/schedule/export/pdf', {
         params: {
-          start: start.toISOString().split('T')[0], // FIXED: Send YYYY-MM-DD
-          end: end.toISOString().split('T')[0] // FIXED: Send YYYY-MM-DD
+          start: start.toISOString().split('T')[0],
+          end: end.toISOString().split('T')[0]
         },
         responseType: 'blob'
       });
@@ -205,30 +223,28 @@ export default function CalendarView() {
     toast.success('Exported! Open with your calendar app');
   };
 
+  // FIXED: Proper error handling, no err reference in finally
   const syncGoogle = async () => {
     setSyncing(true);
+    let openedPopup = false;
     try {
       const res = await API.post('/schedule/google/sync');
       toast.success(res.data.msg);
       setGoogleConnected(true);
+      setSyncing(false);
     } catch (err) {
       if (err.response?.data?.needsAuth) {
+        openedPopup = true;
         const authRes = await API.get('/schedule/google/auth');
-        const popup = window.open(authRes.data.url, '_blank', 'width=500,height=600');
-
-        const checkPopup = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkPopup);
-            checkGoogleConnection();
-            toast('Now click Sync to Google again');
-          }
-        }, 500);
+        window.open(authRes.data.url, '_blank', 'width=500,height=600');
+        toast('Complete Google login in the popup');
+        // Don't setSyncing(false) - postMessage will handle it
       } else {
         toast.error(err.response?.data?.msg || 'Sync failed');
+        setSyncing(false);
       }
-    } finally {
-      setSyncing(false);
     }
+    if (!openedPopup) setSyncing(false);
   };
 
   const getMonthDays = () => {
@@ -261,7 +277,6 @@ export default function CalendarView() {
   };
 
   const getBlocksForDay = (date) => {
-    // Use local date to match string format "YYYY-MM-DD"
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -272,15 +287,14 @@ export default function CalendarView() {
       return blockDate === dateStr;
     });
 
-    // FIXED: Handle both string and Date exam dates
     const dayExams = exams
-     .filter(e => {
+    .filter(e => {
         const examDate = typeof e.examDate === 'string'
-         ? e.examDate.split('T')[0]
+        ? e.examDate.split('T')[0]
           : new Date(e.examDate).toISOString().split('T')[0];
         return examDate === dateStr;
       })
-     .map(e => ({
+    .map(e => ({
         _id: e._id,
         subject: e.subject,
         topic: e.syllabus || 'EXAM',
@@ -379,7 +393,7 @@ export default function CalendarView() {
                       </div>
                       <div className="block-detail-content">
                         <div className="block-title-pro">
-                          {block.Time} - {block.subject} {block.isExam && '(EXAM)'}
+                          {block.time} - {block.subject} {block.isExam && '(EXAM)'}
                         </div>
                         <div className="block-meta-pro">
                           {block.topic}
@@ -528,10 +542,10 @@ export default function CalendarView() {
                       key={block._id}
                       className={`block-pro ${getBlockData(block).class}`}
                       style={{ backgroundColor: blockColor }}
-                      title={`${block.startTime} - ${block.subject}: ${block.topic}`}
+                      title={`${block.time} - ${block.subject}: ${block.topic}`}
                     >
                       <Icon size={12} />
-                      <span>{block.isExam ? `📝 ${block.subject}` : `${block.startTime} ${block.subject}`}</span>
+                      <span>{block.isExam ? `📝 ${block.subject}` : `${block.time} ${block.subject}`}</span>
                       {block.actualDuration > 0 && <span className="actual-badge-pro">{block.actualDuration}m</span>}
                     </div>
                   );
