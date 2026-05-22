@@ -17,6 +17,10 @@ export default function TodaysAgenda() {
   const [generating, setGenerating] = useState(false);
   const [activeTimerBlock, setActiveTimerBlock] = useState(null);
 
+  // ADD THESE 2 LINES
+  const [dayStartsAt, setDayStartsAt] = useState(9);
+  const [dayEndsAt, setDayEndsAt] = useState(18);
+
   const fetchToday = async () => {
     setLoading(true);
     try {
@@ -60,17 +64,17 @@ export default function TodaysAgenda() {
   const markMissed = async (id) => {
   try {
     const res = await API.patch(`/schedule/${id}/missed`);
-    console.log('Missed response:', res.data); 
-    
+    console.log('Missed response:', res.data);
+
     setActiveTimerBlock(null);
     toast.success(`Block deleted. Rescheduled ${res.data.newBlocksCreated} new blocks`);
-    
-    await fetchToday(); 
-    
+
+    await fetchToday();
+
   } catch (err) {
     console.error('Missed error:', err.response?.data);
     toast.error(err.response?.data?.msg || 'Failed to mark missed');
-    await fetchToday(); 
+    await fetchToday();
   }
 };
 
@@ -140,7 +144,7 @@ export default function TodaysAgenda() {
     }
   };
 
-  const generateSchedule = async () => {
+ const generateSchedule = async () => {
     if (!confirm('This will delete your current schedule and regenerate. Continue?')) return;
     setGenerating(true);
     try {
@@ -154,15 +158,14 @@ export default function TodaysAgenda() {
 
       await API.delete('/schedule/clear-all');
 
-      const config = {
-        startDate: startDate? new Date(startDate) : new Date(),
-        startHour: 9,
-        endHour: 22,
-        studyBlock: 50,
-        breakBlock: 10
-      };
+      const res = await API.post('/schedule/generate', {
+        exams,
+        startHour: parseInt(dayStartsAt) || 9,
+        endHour: parseInt(dayEndsAt) || 18,
+        startDate: startDate || new Date().toISOString().split('T')[0],
+        breakRatio: { study: 50, break: 10 }
+      });
 
-      const res = await API.post('/schedule/generate', { exams, config });
       toast.success(`Generated ${res.data.count} blocks`);
       setShowDateModal(false);
       setStartDate('');
@@ -199,12 +202,34 @@ export default function TodaysAgenda() {
           <div className="modal">
             <h3>When should we start?</h3>
             <p className="modal-subtitle">This will delete all existing blocks.</p>
+
+            <label>Start from:</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               min={new Date().toISOString().split('T')[0]}
             />
+
+            <label>Day starts at:</label>
+            <input
+              type="number"
+              min="0"
+              max="23"
+              value={dayStartsAt}
+              onChange={(e) => setDayStartsAt(e.target.value)}
+            />
+
+            <label>Day ends at:</label>
+            <input
+              type="number"
+              min="1"
+              max="23"
+              value={dayEndsAt}
+              onChange={(e) => setDayEndsAt(e.target.value)}
+            />
+            <small>Use 0-23. For 24hr mode: 0 to 23</small>
+
             <div className="modal-actions">
               <button onClick={generateSchedule} disabled={generating}>
                 {generating? 'Generating...' : startDate? 'Start from this date' : 'Start today'}
@@ -226,12 +251,12 @@ export default function TodaysAgenda() {
           const isBreak = block.isBreak || block.type === 'Break';
           const isCompleted = block.completed;
           const isMissed = block.missed;
-          const isPending = !isCompleted && !isMissed;
+          const isPending =!isCompleted &&!isMissed;
           const isStudyOrReview = block.type === 'Study' || block.type === 'Review';
           const overdue = isOverdue(block);
 
           return (
-            <div key={block._id} className={`block-card ${isBreak? 'break' : ''} ${isCompleted? 'completed' : ''} ${isMissed? 'missed' : ''} ${overdue && !isMissed? 'overdue' : ''}`}>
+            <div key={block._id} className={`block-card ${isBreak? 'break' : ''} ${isCompleted? 'completed' : ''} ${isMissed? 'missed' : ''} ${overdue &&!isMissed? 'overdue' : ''}`}>
               <div className="block-card-header">
                 <div className="block-card-content">
                   <h3>{block.subject} - {block.topic}</h3>
@@ -241,7 +266,7 @@ export default function TodaysAgenda() {
                     <span><b>Time:</b> {block.time}</span>
                   </p>
                   {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
-                  {overdue && !isMissed && <span className="overdue-badge">⚠️ Overdue</span>}
+                  {overdue &&!isMissed && <span className="overdue-badge">⚠️ Overdue</span>}
                 </div>
                 <div className="block-card-controls">
                   <button className="edit-btn" onClick={() => openEditModal(block)}>✎</button>
