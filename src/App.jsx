@@ -108,7 +108,7 @@ function App() {
       <main style={{ padding: '20px' }}>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/auth" element={user? <Navigate to="/agenda" /> : <Auth />} />
+            <Route path="/auth" element={user? <Navigate to="/exams" /> : <Auth />} />
 
             <Route path="/agenda" element={user? <TodaysAgenda /> : <Navigate to="/auth" />} />
             <Route path="/calendar" element={user? <CalendarView /> : <Navigate to="/auth" />} />
