@@ -466,6 +466,7 @@ export default function Exams() {
                   Custom
                 </button>
               </div>
+              </div>
             <div className="hours-grid">
               {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(day => (
                 <div key={day} className="hour-input">
