@@ -1,5 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+
+:root {
+  /* Core Theme - Indigo/Purple */
+  --indigo-50: #eef2ff;
+  --indigo-500: #6366f1;
+  --indigo-600: #4f46e5;
+  --purple-500: #8b5cf6;
+  --purple-600: #7c3aed;
+  
+  /* Accent Colors */
+  --blue-600: #2563eb;
+  --red-600: #dc2626;
+  --green-500: #10b981;
+  --green-600: #059669;
+  --amber-100: #fef3c7;
+  --amber-500: #f59e0b;
+  --amber-700: #b45309;
+  
+  /* Slate Scale */
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-300: #cbd5e1;
+  --slate-500: #64748b;
+  --slate-700: #334155;
+  --slate-900: #0f172a;
+  
+  /* Shadows & Effects */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --ring: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  
+  /* Font Weights */
+  --font-medium: 500;
+  --font-bold: 700;
+  --font-extrabold: 800;
+  
+  /* Text Sizes */
+  --text-base: 15px;
+  --text-lg: 16px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 @keyframes authFadeIn {
   from {
@@ -33,7 +76,7 @@
   font-size: 28px;
   font-weight: var(--font-extrabold);
   text-align: center;
-  background: linear-gradient(135deg, var(--red-600) 0%, var(--purple-600) 50%, var(--blue-600) 100%);
+  background: linear-gradient(135deg, var(--indigo-600) 0%, var(--purple-600) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -57,6 +100,7 @@
   font-family: inherit;
   background: var(--slate-50);
   font-weight: var(--font-medium);
+  color: var(--slate-900);
 }
 
 .auth-form input:focus {
@@ -120,7 +164,8 @@
 
 .toggle-auth:hover {
   background: var(--slate-50);
-  border-color: var(--slate-300);
+  border-color: var(--indigo-500);
+  color: var(--indigo-600);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -163,6 +208,7 @@
 
 .hour-mode-toggle button:hover:not(.active) {
   background: var(--slate-50);
+  color: var(--indigo-600);
 }
 
 .topic-row {
@@ -182,6 +228,7 @@
   background: var(--slate-50);
   font-weight: var(--font-medium);
   transition: all 0.25s;
+  color: var(--slate-900);
 }
 
 .topic-row input:focus {
