@@ -197,10 +197,10 @@ export default function TodaysAgenda() {
         />
       )}
 
-      {showDateModal && (
+        {showDateModal && (
         <div className="modal-backdrop">
           <div className="modal">
-            <h3>When should we start?</h3>
+            <h3>Generate New Schedule</h3>
             <p className="modal-subtitle">This will delete all existing blocks.</p>
 
             <label>Start from:</label>
@@ -211,7 +211,8 @@ export default function TodaysAgenda() {
               min={new Date().toISOString().split('T')[0]}
             />
 
-            <label>Day starts at:</label>
+            {/* ADD THESE 2 FIELDS */}
+            <label>Day starts at (0-23):</label>
             <input
               type="number"
               min="0"
@@ -220,7 +221,7 @@ export default function TodaysAgenda() {
               onChange={(e) => setDayStartsAt(e.target.value)}
             />
 
-            <label>Day ends at:</label>
+            <label>Day ends at (1-23):</label>
             <input
               type="number"
               min="1"
@@ -228,7 +229,7 @@ export default function TodaysAgenda() {
               value={dayEndsAt}
               onChange={(e) => setDayEndsAt(e.target.value)}
             />
-            <small>Use 0-23. For 24hr mode: 0 to 23</small>
+            <small>For full day use 0 to 23. For overnight use like 22 to 6.</small>
 
             <div className="modal-actions">
               <button onClick={generateSchedule} disabled={generating}>
@@ -241,7 +242,6 @@ export default function TodaysAgenda() {
           </div>
         </div>
       )}
-
       {loading? (
         <p className="loading-text">Loading...</p>
       ) : blocks.length === 0? (
