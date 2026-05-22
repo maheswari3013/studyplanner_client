@@ -12,7 +12,7 @@ const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
 };
 
-function SortableExamCard({ exam, idx, onDelete, onUpdateConfidence }) {
+function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: exam._id });
 
   const style = {
@@ -45,9 +45,14 @@ function SortableExamCard({ exam, idx, onDelete, onUpdateConfidence }) {
             </p>
           </div>
         </div>
-        <button onClick={() => onDelete(exam._id, exam.subject)} className="btn-danger">
-          Delete
-        </button>
+        <div className="exam-card-actions">
+          <button onClick={() => onEdit(exam)} className="btn-secondary">
+            Edit
+          </button>
+          <button onClick={() => onDelete(exam._id, exam.subject)} className="btn-danger">
+            Delete
+          </button>
+        </div>
       </div>
 
       <div className="exam-stats-grid">
@@ -67,7 +72,6 @@ function SortableExamCard({ exam, idx, onDelete, onUpdateConfidence }) {
         </div>
       </div>
 
-      {/* ADD THIS: Confidence Tracker */}
       <div className="confidence-section">
         <p className="stat-label">Confidence Level</p>
         <div className="confidence-buttons">
@@ -113,6 +117,7 @@ export default function Exams() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [editingExam, setEditingExam] = useState(null); // ADD THIS
 
   const [subject, setSubject] = useState('');
   const [examDate, setExamDate] = useState('');
@@ -178,7 +183,6 @@ export default function Exams() {
     }
   };
 
-  // ADD THIS: Update confidence level
   const handleUpdateConfidence = async (examId, level) => {
     try {
       await examApi.updateConfidence(examId, level);
@@ -216,7 +220,26 @@ export default function Exams() {
     setAvailableHours({...availableHours, [day]: Number(hours) });
   };
 
+  // ADD THIS: Load exam data into form for editing
+  const handleEdit = (exam) => {
+    setEditingExam(exam);
+    setSubject(exam.subject);
+    setExamDate(exam.examDate.split('T')[0]);
+    setTime(exam.time || '09:00');
+    setLocation(exam.location || '');
+    setDifficulty(exam.difficulty || 3);
+    setCurrentKnowledge(exam.currentKnowledge || 3);
+    setPriority(exam.priority || 3);
+    setHourMode(exam.totalHours? 'subject' : 'topic');
+    setTotalHours(exam.totalHours || 10);
+    setTopics(exam.syllabusTopics?.length? exam.syllabusTopics : [{ name: '', hours: 1 }]);
+    setAvailableHours(exam.availableHours || {...defaultAvailableHours });
+    setBreakRatio(exam.breakRatio || { study: 50, break: 10 });
+    setShowForm(true);
+  };
+
   const resetForm = () => {
+    setEditingExam(null);
     setSubject('');
     setExamDate('');
     setTime('09:00');
@@ -235,7 +258,6 @@ export default function Exams() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ADD THIS: Past date validation
     const selectedDate = new Date(examDate);
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -259,20 +281,27 @@ export default function Exams() {
       priority,
       totalHours: hourMode === 'subject'? totalHours : undefined,
       syllabusTopics: hourMode === 'topic'
-    ? filteredTopics
+       ? filteredTopics
         : filteredTopics.map(t => ({ name: t.name, hours: totalHours / filteredTopics.length })),
       availableHours,
       breakRatio
     };
 
     try {
-      await examApi.createExam(examData);
-      toast.success('Exam added');
+      if (editingExam) {
+        // UPDATE EXISTING
+        await examApi.updateExam(editingExam._id, examData);
+        toast.success('Exam updated');
+      } else {
+        // CREATE NEW
+        await examApi.createExam(examData);
+        toast.success('Exam added');
+      }
       setShowForm(false);
       resetForm();
       fetchExams();
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to add exam');
+      toast.error(err.response?.data?.msg || 'Failed to save exam');
     }
   };
 
@@ -341,19 +370,18 @@ export default function Exams() {
               {generating? 'Generating...' : 'Generate Plan'}
             </button>
           )}
-          <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-            {showForm? 'Cancel' : '+ Add Exam'}
-          </button>
+          <button onClick={() => { resetForm(); setShowForm(!showForm); }} className="btn-primary">
+  {showForm? 'Cancel' : '+ Add Exam'}
+</button>
         </div>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="exam-form">
-          <h3>Add New Exam</h3>
+          <h3>{editingExam? 'Edit Exam' : 'Add New Exam'}</h3>
 
           <div className="form-row">
             <input type="text" placeholder="Subject *" value={subject} onChange={e => setSubject(e.target.value)} required />
-            {/* UPDATED: Added min validation */}
             <input
               type="date"
               value={examDate}
@@ -466,7 +494,7 @@ export default function Exams() {
                   Custom
                 </button>
               </div>
-              </div>
+            </div>
             <div className="hours-grid">
               {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(day => (
                 <div key={day} className="hour-input">
@@ -489,7 +517,9 @@ export default function Exams() {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary btn-submit">Save Exam</button>
+          <button type="submit" className="btn-primary btn-submit">
+            {editingExam? 'Update Exam' : 'Save Exam'}
+          </button>
         </form>
       )}
 
@@ -528,6 +558,7 @@ export default function Exams() {
                     exam={exam}
                     idx={idx}
                     onDelete={handleDelete}
+                    onEdit={handleEdit}
                     onUpdateConfidence={handleUpdateConfidence}
                   />
                 ))}
