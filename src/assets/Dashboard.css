@@ -357,7 +357,7 @@
 .dash-score.low {
   background: linear-gradient(135deg, #fee2e2, #fecaca);
   color: #991b1b;
-  box-shadow: 0 4px 12px rgba(239, 68, 0.25);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
 }
 
 .dash-readiness-bar {
