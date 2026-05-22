@@ -43,32 +43,31 @@ export default function Dashboard() {
     setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const [blocksRes, examsRes, statsRes, progressRes, logsRes, confidenceRes] = await Promise.all([
-        API.get('/blocks/today'),
-        API.get('/exams/upcoming'),
-        API.get('/user/stats'),
-        API.get('/user/subject-progress'), // Returns [{subject: 'Math', planned: 20, completed: 12}]
-        API.get('/user/study-logs'), // Returns [{subject: 'Math', planned: 20, actual: 15}]
-        API.get('/user/confidence') // Returns {examId: level}
-      ]);
+const fetchDashboardData = async () => {
+  try {
+    setLoading(true);
+    const [blocksRes, examsRes, statsRes, progressRes, logsRes, confidenceRes] = await Promise.all([
+      API.get('/schedule/today'), 
+      API.get('/schedule/upcoming'), 
+      API.get('/schedule/user/stats'), 
+      API.get('/schedule/user/subject-progress'), 
+      API.get('/schedule/user/study-logs'), 
+      API.get('/schedule/user/confidence') 
+    ]);
 
-      setTodayBlocks(blocksRes.data || []);
-      setUpcomingExams(examsRes.data?.slice(0, 3) || []);
-      setStats(statsRes.data || stats);
-      setSubjectProgress(progressRes.data || []);
-      setStudyLogs(logsRes.data || []);
-      setConfidence(confidenceRes.data || {});
-    } catch (err) {
-      console.error('Dashboard fetch error:', err);
-      toast.error('Failed to load dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    setTodayBlocks(blocksRes.data || []);
+    setUpcomingExams(examsRes.data?.slice(0, 3) || []);
+    setStats(statsRes.data || stats);
+    setSubjectProgress(progressRes.data || []);
+    setStudyLogs(logsRes.data || []);
+    setConfidence(confidenceRes.data || {});
+  } catch (err) {
+    console.error('Dashboard fetch error:', err);
+    toast.error('Failed to load dashboard');
+  } finally {
+    setLoading(false);
+  }
+};
   const completeBlock = async (blockId) => {
     try {
       await API.patch(`/blocks/${blockId}/complete`);
