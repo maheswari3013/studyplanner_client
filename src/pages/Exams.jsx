@@ -100,6 +100,7 @@ export default function Exams() {
   const [hoursPreset, setHoursPreset] = useState('custom');
   const [breakRatio, setBreakRatio] = useState({ study: 50, break: 10 });
 
+  // KEEP THIS - IT CONTROLS THE INPUTS BELOW
   const [config, setConfig] = useState({
     startHour: 9,
     endHour: 18,
@@ -210,7 +211,7 @@ export default function Exams() {
       priority,
       totalHours: hourMode === 'subject'? totalHours : undefined,
       syllabusTopics: hourMode === 'topic'
-      ? filteredTopics
+     ? filteredTopics
         : filteredTopics.map(t => ({ name: t.name, hours: totalHours / filteredTopics.length })),
       availableHours,
       breakRatio
@@ -239,39 +240,43 @@ export default function Exams() {
   };
 
   const handleGenerateAll = async () => {
-  if (exams.length === 0) return toast.error('Add at least 1 exam first');
-  setGenerating(true);
+    if (exams.length === 0) return toast.error('Add at least 1 exam first');
+    setGenerating(true);
 
-  try {
-    const res = await scheduleApi.generateSchedule({ 
-      exams, 
-      config // ← Now sending your Day starts/ends from UI
-    });
-
-    if (!res.data.success) {
-      res.data.conflicts?.forEach(c => {
-        if (c.type === 'TOPIC_IMPOSSIBLE') {
-          toast.error(`${c.topicName}: needs ${c.required.toFixed(1)}h, only ${c.maxPossible.toFixed(1)}h possible`, { duration: 6000 });
-        } else {
-          toast.error(c.message, { duration: 6000 });
-        }
+    try {
+      // NOW USING THE INPUT VALUES FROM CONFIG STATE
+      const res = await scheduleApi.generateSchedule({
+        exams,
+        startHour: parseInt(config.startHour), // Uses input value
+        endHour: parseInt(config.endHour), // Uses input value
+        startDate: config.startDate, // Uses input value
+        breakRatio
       });
-      return;
-    }
 
-    toast.success(`Generated ${res.data.count} study blocks`);
-    navigate('/calendar');
-  } catch (err) {
-    const conflicts = err.response?.data?.conflicts;
-    if (conflicts) {
-      conflicts.forEach(c => toast.error(c.message || 'Conflict detected', { duration: 6000 }));
-    } else {
-      toast.error(err.response?.data?.msg || 'Failed to generate plan');
+      if (!res.data.success) {
+        res.data.conflicts?.forEach(c => {
+          if (c.type === 'TOPIC_IMPOSSIBLE') {
+            toast.error(`${c.topicName}: needs ${c.required.toFixed(1)}h, only ${c.maxPossible.toFixed(1)}h possible`, { duration: 6000 });
+          } else {
+            toast.error(c.message, { duration: 6000 });
+          }
+        });
+        return;
+      }
+
+      toast.success(`Generated ${res.data.count} study blocks`);
+      navigate('/calendar');
+    } catch (err) {
+      const conflicts = err.response?.data?.conflicts;
+      if (conflicts) {
+        conflicts.forEach(c => toast.error(c.message || 'Conflict detected', { duration: 6000 }));
+      } else {
+        toast.error(err.response?.data?.msg || 'Failed to generate plan');
+      }
+    } finally {
+      setGenerating(false);
     }
-  } finally {
-    setGenerating(false);
-  }
-};
+  };
 
   if (loading) return <div className="exams-container"><p>Loading...</p></div>;
 
@@ -448,6 +453,7 @@ export default function Exams() {
               <input type="date" value={config.startDate} onChange={e => setConfig({...config, startDate: e.target.value })} />
             </label>
           </div>
+          <small>For full day use 0 to 23. For overnight use like 22 to 6.</small>
         </div>
       )}
 
