@@ -6,8 +6,10 @@ export const examApi = {
   createExam: (data) => API.post('/exams', data),
   updateExam: (id, data) => API.put(`/exams/${id}`, data),
   deleteExam: (id) => API.delete(`/exams/${id}`),
+
   
   getExamProgress: (examId) => API.get(`/exams/${examId}/progress`),
+  updateConfidence: (id, level) => API.patch(`/exams/${id}/confidence`, { level }),
   updateTopicProgress: (examId, topicId, completed) => 
     API.patch(`/exams/${examId}/topics/${topicId}`, { completed })
 };

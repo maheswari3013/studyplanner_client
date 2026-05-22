@@ -36,14 +36,14 @@ export default function Profile() {
     confirmPassword: ''
   });
 
-  // Email change flow states
   const [newEmail, setNewEmail] = useState('');
-  const [emailChangeStep, setEmailChangeStep] = useState(0); // 0=init, 1=verifyOld, 2=verifyNew
+  const [emailChangeStep, setEmailChangeStep] = useState(0);
   const [oldEmailOtp, setOldEmailOtp] = useState('');
   const [newEmailOtp, setNewEmailOtp] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifStatus, setNotifStatus] = useState('checking');
+  const [googleStatus, setGoogleStatus] = useState('checking'); // ADD THIS
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -53,7 +53,19 @@ export default function Profile() {
         setNotifStatus(sub? 'enabled' : 'disabled');
       }
     };
+
+    // ADD THIS: Check Google Calendar connection
+    const checkGoogleStatus = async () => {
+      try {
+        const res = await API.get('/schedule/google/status');
+        setGoogleStatus(res.data.connected? 'connected' : 'disconnected');
+      } catch {
+        setGoogleStatus('disconnected');
+      }
+    };
+
     checkSubscription();
+    checkGoogleStatus();
   }, []);
 
   const resetEmailFlow = () => {
@@ -72,13 +84,62 @@ export default function Profile() {
         toast.error('No study blocks to export. Create some first.');
         return;
       }
-      if (type === 'pdf') exportToPDF(blocks, user.name);
+      if (type === 'pdf') exportToPDF(blocks, user?.name || 'User'); // SAFE ACCESS
       else exportToICS(blocks);
     } catch (err) {
       console.error(err);
       toast.error('Export failed');
     } finally {
       setExporting(false);
+    }
+  };
+
+  // ADD THIS: Google Calendar Connect
+  const handleConnectGoogle = async () => {
+    try {
+      const res = await API.get('/schedule/google/auth');
+      const popup = window.open(res.data.url, '_blank', 'width=500,height=600');
+
+      const handleMessage = (event) => {
+        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+          setGoogleStatus('connected');
+          toast.success('Google Calendar connected!');
+          window.removeEventListener('message', handleMessage);
+          popup?.close();
+        }
+        if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+          toast.error('Google connection failed');
+          window.removeEventListener('message', handleMessage);
+        }
+      };
+      window.addEventListener('message', handleMessage);
+    } catch (err) {
+      toast.error('Failed to connect Google Calendar');
+    }
+  };
+
+  // ADD THIS: Sync to Google Calendar
+  const handleSyncCalendar = async () => {
+    try {
+      const res = await API.post('/schedule/google/sync');
+      toast.success(res.data.msg);
+    } catch (err) {
+      if (err.response?.data?.needsAuth) {
+        toast.error('Connect Google Calendar first');
+      } else {
+        toast.error('Sync failed');
+      }
+    }
+  };
+
+  // ADD THIS: Disconnect Google
+  const handleDisconnectGoogle = async () => {
+    try {
+      await API.delete('/schedule/google/disconnect');
+      setGoogleStatus('disconnected');
+      toast.success('Google Calendar disconnected');
+    } catch (err) {
+      toast.error('Failed to disconnect');
     }
   };
 
@@ -110,7 +171,7 @@ export default function Profile() {
   };
 
   const sendOtpToOldEmail = async () => {
-    if (!newEmail || newEmail === user.email) {
+    if (!newEmail || newEmail === user?.email) { // SAFE ACCESS
       toast.error('Enter a new email address');
       return;
     }
@@ -177,7 +238,7 @@ export default function Profile() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_PUBLIC_VAPID_KEY)
       });
-      
+
       await API.post('/notifications/subscribe', subscription);
       setNotifStatus('enabled');
       toast.success('Notifications enabled! You will get study reminders.');
@@ -213,6 +274,27 @@ export default function Profile() {
           ) : (
             <button onClick={subscribeToNotifications} className="btn-primary">
               Enable Study Reminders
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ADD THIS: Google Calendar Section */}
+      <div className="password-card">
+        <h3>Google Calendar</h3>
+        <div className="profile-actions">
+          {googleStatus === 'connected'? (
+            <>
+              <button onClick={handleSyncCalendar} className="btn-primary">
+                Sync to Google Calendar
+              </button>
+              <button onClick={handleDisconnectGoogle} className="btn-secondary">
+                Disconnect
+              </button>
+            </>
+          ) : (
+            <button onClick={handleConnectGoogle} className="btn-primary">
+              Connect Google Calendar
             </button>
           )}
         </div>
@@ -295,7 +377,7 @@ export default function Profile() {
 
             {emailChangeStep === 1 && (
               <>
-                <p>OTP sent to <strong>{user.email}</strong></p>
+                <p>OTP sent to <strong>{user?.email}</strong></p>
                 <label>
                   Enter OTP from current email
                   <div className="email-otp-row">
@@ -359,7 +441,7 @@ export default function Profile() {
             disabled={exporting}
             className="btn-secondary"
           >
-            {exporting? 'Exporting...' : 'Add to Calendar'}
+            {exporting? 'Exporting...' : 'Download.ics File'}
           </button>
         </div>
       </div>

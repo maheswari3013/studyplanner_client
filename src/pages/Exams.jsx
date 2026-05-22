@@ -12,7 +12,7 @@ const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
 };
 
-function SortableExamCard({ exam, idx, onDelete }) {
+function SortableExamCard({ exam, idx, onDelete, onUpdateConfidence }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: exam._id });
 
   const style = {
@@ -21,7 +21,11 @@ function SortableExamCard({ exam, idx, onDelete }) {
   };
 
   const totalHours = exam.syllabusTopics?.reduce((sum, t) => sum + (t.hours || 0), 0) || exam.totalHours || 0;
-  const isPast = new Date(exam.examDate) < new Date();
+  const isPast = new Date(exam.examDate) < new Date(new Date().setHours(0,0,0,0));
+  const confidence = exam.confidenceLevel?? 0;
+
+  const confidenceColors = ['#EF4444', '#F97316', '#EAB308', '#84CC16', '#22C55E'];
+  const confidenceLabels = ['None', 'Low', 'Medium', 'High', 'Very High'];
 
   return (
     <div ref={setNodeRef} className={`exam-card-sortable ${isPast? 'past-due' : ''}`} style={style}>
@@ -63,6 +67,30 @@ function SortableExamCard({ exam, idx, onDelete }) {
         </div>
       </div>
 
+      {/* ADD THIS: Confidence Tracker */}
+      <div className="confidence-section">
+        <p className="stat-label">Confidence Level</p>
+        <div className="confidence-buttons">
+          {[0,1,2,3,4].map(level => (
+            <button
+              key={level}
+              onClick={() => onUpdateConfidence(exam._id, level)}
+              className={`confidence-btn ${confidence === level? 'active' : ''}`}
+              style={{
+                backgroundColor: confidence === level? confidenceColors[level] : '#E5E7EB',
+                color: confidence === level? '#fff' : '#6B7280'
+              }}
+              title={confidenceLabels[level]}
+            >
+              {level}
+            </button>
+          ))}
+          <span className="confidence-label" style={{ color: confidenceColors[confidence] }}>
+            {confidenceLabels[confidence]}
+          </span>
+        </div>
+      </div>
+
       {exam.syllabusTopics?.length > 0 && (
         <div className="topics-list-section">
           <p className="stat-label">Topics ({exam.syllabusTopics.length})</p>
@@ -100,7 +128,6 @@ export default function Exams() {
   const [hoursPreset, setHoursPreset] = useState('custom');
   const [breakRatio, setBreakRatio] = useState({ study: 50, break: 10 });
 
-  // KEEP THIS - IT CONTROLS THE INPUTS BELOW
   const [config, setConfig] = useState({
     startHour: 1,
     endHour: 23,
@@ -151,6 +178,17 @@ export default function Exams() {
     }
   };
 
+  // ADD THIS: Update confidence level
+  const handleUpdateConfidence = async (examId, level) => {
+    try {
+      await examApi.updateConfidence(examId, level);
+      setExams(prev => prev.map(e => e._id === examId? {...e, confidenceLevel: level} : e));
+      toast.success('Confidence updated');
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to update confidence');
+    }
+  };
+
   const addTopic = () => setTopics([...topics, { name: '', hours: 1 }]);
 
   const updateTopic = (index, field, value) => {
@@ -196,6 +234,16 @@ export default function Exams() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ADD THIS: Past date validation
+    const selectedDate = new Date(examDate);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    if (selectedDate < today) {
+      return toast.error('Exam date cannot be in the past');
+    }
+
     const filteredTopics = topics.filter(t => t.name.trim()!== '');
     if (filteredTopics.length === 0) {
       return toast.error('Add at least 1 topic');
@@ -211,7 +259,7 @@ export default function Exams() {
       priority,
       totalHours: hourMode === 'subject'? totalHours : undefined,
       syllabusTopics: hourMode === 'topic'
-     ? filteredTopics
+    ? filteredTopics
         : filteredTopics.map(t => ({ name: t.name, hours: totalHours / filteredTopics.length })),
       availableHours,
       breakRatio
@@ -244,12 +292,11 @@ export default function Exams() {
     setGenerating(true);
 
     try {
-      // NOW USING THE INPUT VALUES FROM CONFIG STATE
       const res = await scheduleApi.generateSchedule({
         exams,
-        startHour: parseInt(config.startHour), // Uses input value
-        endHour: parseInt(config.endHour), // Uses input value
-        startDate: config.startDate, // Uses input value
+        startHour: parseInt(config.startHour),
+        endHour: parseInt(config.endHour),
+        startDate: config.startDate,
         breakRatio
       });
 
@@ -306,7 +353,14 @@ export default function Exams() {
 
           <div className="form-row">
             <input type="text" placeholder="Subject *" value={subject} onChange={e => setSubject(e.target.value)} required />
-            <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)} required />
+            {/* UPDATED: Added min validation */}
+            <input
+              type="date"
+              value={examDate}
+              onChange={e => setExamDate(e.target.value)}
+              min={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })}
+              required
+            />
           </div>
 
           <div className="form-row">
@@ -412,7 +466,6 @@ export default function Exams() {
                   Custom
                 </button>
               </div>
-            </div>
             <div className="hours-grid">
               {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(day => (
                 <div key={day} className="hour-input">
@@ -469,7 +522,13 @@ export default function Exams() {
             <SortableContext items={exams.map(e => e._id)} strategy={verticalListSortingStrategy}>
               <div className="exams-list">
                 {exams.map((exam, idx) => (
-                  <SortableExamCard key={exam._id} exam={exam} idx={idx} onDelete={handleDelete} />
+                  <SortableExamCard
+                    key={exam._id}
+                    exam={exam}
+                    idx={idx}
+                    onDelete={handleDelete}
+                    onUpdateConfidence={handleUpdateConfidence}
+                  />
                 ))}
               </div>
             </SortableContext>
