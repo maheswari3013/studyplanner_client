@@ -327,13 +327,13 @@ const Auth = () => {
   return (
     <section className={`relative flex min-h-[calc(100vh-40px)] w-full items-center justify-center overflow-hidden px-4 py-14 font-sans transition-colors duration-500 sm:px-6 lg:px-8 ${themeClasses.section}`}>
       <div className={`pointer-events-none absolute left-1/2 top-10 h-80 w-80 -translate-x-1/2 rounded-full blur-3xl transition-colors duration-500 ${themeClasses.glowPrimary}`} />
-      <div className={`pointer-events-none absolute bottom-[-8rem] right-[-6rem] h-96 w-96 rounded-full blur-3xl transition-colors duration-500 ${themeClasses.glowSecondary}`} />
+      <div className={`pointer-events-none absolute bottom-32 right-24 h-96 w-96 rounded-full blur-3xl transition-colors duration-500 ${themeClasses.glowSecondary}`} />
 
       <button
         type="button"
         onClick={() => setTheme(isDark ? 'light' : 'dark')}
         aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-        className={`absolute right-4 top-4 z-20 flex h-10 w-[4.5rem] items-center justify-between rounded-full border px-2 transition duration-500 sm:right-6 sm:top-6 ${themeClasses.toggleTrack}`}
+        className={`absolute right-4 top-4 z-20 flex h-10 w-18 items-center justify-between rounded-full border px-2 transition duration-500 sm:right-6 sm:top-6 ${themeClasses.toggleTrack}`}
       >
         <span className={`text-sm transition duration-300 ${isDark ? themeClasses.toggleIconMuted : 'text-white'}`}>☀️</span>
         <span className={`text-sm transition duration-300 ${isDark ? 'text-[#F5F5F2]' : themeClasses.toggleIconMuted}`}>🌙</span>
