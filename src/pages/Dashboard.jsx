@@ -32,45 +32,45 @@ export default function Dashboard() {
   });
   const [todayBlocks, setTodayBlocks] = useState([]);
   const [upcomingExams, setUpcomingExams] = useState([]);
-  const [subjectProgress, setSubjectProgress] = useState([]); // For Progress Rings
-  const [confidence, setConfidence] = useState({}); // { examId: level }
-  const [studyLogs, setStudyLogs] = useState([]); // For Study Log History
+  const [subjectProgress, setSubjectProgress] = useState([]);
+  const [confidence, setConfidence] = useState({});
+  const [studyLogs, setStudyLogs] = useState([]);
   const [affirmation, setAffirmation] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
-    // Show affirmation if it's a heavy study week: >3 blocks today
     setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
   }, []);
 
-const fetchDashboardData = async () => {
-  try {
-    setLoading(true);
-    const [blocksRes, examsRes, statsRes, progressRes, logsRes, confidenceRes] = await Promise.all([
-      API.get('/schedule/today'), 
-      API.get('/schedule/upcoming'), 
-      API.get('/schedule/user/stats'), 
-      API.get('/schedule/user/subject-progress'), 
-      API.get('/schedule/user/study-logs'), 
-      API.get('/schedule/user/confidence') 
-    ]);
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [blocksRes, examsRes, statsRes, progressRes, logsRes, confidenceRes] = await Promise.all([
+        API.get('/schedule/today'),
+        API.get('/schedule/upcoming'),
+        API.get('/schedule/user/stats'),
+        API.get('/schedule/user/subject-progress'),
+        API.get('/schedule/user/study-logs'),
+        API.get('/schedule/user/confidence')
+      ]);
 
-    setTodayBlocks(blocksRes.data || []);
-    setUpcomingExams(examsRes.data?.slice(0, 3) || []);
-    setStats(statsRes.data || stats);
-    setSubjectProgress(progressRes.data || []);
-    setStudyLogs(logsRes.data || []);
-    setConfidence(confidenceRes.data || {});
-  } catch (err) {
-    console.error('Dashboard fetch error:', err);
-    toast.error('Failed to load dashboard');
-  } finally {
-    setLoading(false);
-  }
-};
+      setTodayBlocks(blocksRes.data || []);
+      setUpcomingExams(examsRes.data?.slice(0, 3) || []);
+      setStats(statsRes.data || stats);
+      setSubjectProgress(progressRes.data || []);
+      setStudyLogs(logsRes.data || []);
+      setConfidence(confidenceRes.data || {});
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+      toast.error('Failed to load dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const completeBlock = async (blockId) => {
     try {
-      await API.patch(`/blocks/${blockId}/complete`);
+      await API.patch(`/schedule/${blockId}/complete`);
       toast.success('Block completed!');
       fetchDashboardData();
     } catch (err) {
@@ -198,7 +198,6 @@ const fetchDashboardData = async () => {
         </div>
       </div>
 
-      {/* Progress Rings: Revision Plan per Subject */}
       {subjectProgress.length > 0 && (
         <div className="content-section">
           <div className="section-header">
@@ -210,7 +209,7 @@ const fetchDashboardData = async () => {
           <div className="progress-rings">
             {subjectProgress.map(sub => {
               const percent = sub.planned > 0? Math.round((sub.completed / sub.planned) * 100) : 0;
-              const strokeDasharray = 2 * Math.PI * 45; // circumference
+              const strokeDasharray = 2 * Math.PI * 45;
               const strokeDashoffset = strokeDasharray * (1 - percent / 100);
 
               return (
@@ -266,13 +265,13 @@ const fetchDashboardData = async () => {
               {todayBlocks.slice(0, 5).map(block => (
                 <div key={block._id} className={`block-item ${block.completed? 'completed' : ''}`}>
                   <div className="block-time">
-                    {new Date(block.startTime).toLocaleTimeString('en-US', {
+                    {new Date(`1970-01-01T${block.time}:00`).toLocaleTimeString('en-US', {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
                   </div>
                   <div className="block-content">
-                    <h4 className="block-title">{block.topic?.name || block.title}</h4>
+                    <h4 className="block-title">{block.topic?.name || block.topic}</h4>
                     <p className="block-duration">{block.duration} minutes</p>
                   </div>
                   {!block.completed && (
@@ -310,7 +309,7 @@ const fetchDashboardData = async () => {
           ) : (
             <div className="confidence-list">
               {upcomingExams.map(exam => {
-                const daysLeft = Math.ceil((new Date(exam.date) - new Date()) / (1000 * 60 * 60 * 24));
+                const daysLeft = Math.ceil((new Date(exam.examDate) - new Date()) / (1000 * 60 * 60 * 24));
                 const readiness = getReadinessScore(exam._id);
                 const level = confidence[exam._id] || 0;
 
@@ -324,7 +323,7 @@ const fetchDashboardData = async () => {
                       <div className="readiness-fill" style={{ width: `${readiness}%` }}>
                         <span>{readiness}% Ready</span>
                       </div>
-                      </div>
+                    </div>
                     <div className="confidence-buttons">
                       {[1,2,3,4].map(l => (
                         <button
@@ -345,7 +344,6 @@ const fetchDashboardData = async () => {
         </div>
       </div>
 
-      {/* Study Log History */}
       {studyLogs.length > 0 && (
         <div className="content-section">
           <div className="section-header">
