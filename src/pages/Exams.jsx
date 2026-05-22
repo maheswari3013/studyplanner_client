@@ -102,8 +102,8 @@ export default function Exams() {
 
   // KEEP THIS - IT CONTROLS THE INPUTS BELOW
   const [config, setConfig] = useState({
-    startHour: 9,
-    endHour: 18,
+    startHour: 1,
+    endHour: 23,
     startDate: new Date().toISOString().split('T')[0]
   });
 
