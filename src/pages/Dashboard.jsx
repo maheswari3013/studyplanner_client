@@ -10,13 +10,13 @@ import toast, { Toaster } from 'react-hot-toast';
 import '../assets/Dashboard.css';
 
 const AFFIRMATIONS = [
-  "You’ve got this. One topic at a time.",
+  "You've got this. One topic at a time.",
   "Progress, not perfection. Keep going.",
   "Your future self will thank you for studying today.",
   "Small steps every day lead to big results.",
   "Believe in your ability to figure things out.",
   "Stressed spelled backwards is desserts. Take a break.",
-  "You’re closer than you were yesterday."
+  "You're closer than you were yesterday."
 ];
 
 export default function Dashboard() {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { examApi } from '../api/examApi';
 import { scheduleApi } from '../api/scheduleApi';
@@ -13,7 +13,7 @@ const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
 };
 
-function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence, editingExam }) {
+function SortableExam({ exam, idx, onDelete, onEdit, onUpdateConfidence, editingExam }) {
   const sortable = useSortable({
     id: exam?._id || `temp-${idx}`,
     disabled: !exam?._id || !!editingExam
@@ -58,7 +58,7 @@ function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence, edi
             </div>
             <p className="exam-meta">
               <CalendarDays size={14} /> {new Date(exam.examDate).toLocaleDateString()} at {exam.time}
-              {exam.location && (<> <span aria-hidden="true">•</span> <MapPin size={14} /> {exam.location} </>)}
+              {exam.location && (<> <span aria-hidden="true">&bull;</span> <MapPin size={14} /> {exam.location} </>)}
             </p>
           </div>
         </div>
@@ -156,12 +156,7 @@ export default function Exams() {
     startDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
   });
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8, tolerance: 5 },
-    }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  const sensors = useSensors(useSensor(PointerSensor));
 
   const fetchExams = async () => {
     try {
@@ -187,16 +182,21 @@ export default function Exams() {
     if (oldIndex === -1 || newIndex === -1) return;
 
     const previousExams = exams;
-    const reorderedExams = arrayMove(exams, oldIndex, newIndex);
-    const orderedIds = reorderedExams.map(exam => exam._id);
+    const newExams = arrayMove(exams, oldIndex, newIndex);
+    const orderedIds = newExams.map(exam => exam._id);
 
-    setExams(reorderedExams);
+    setExams(newExams);
     try {
-      await examApi.reorderExams(orderedIds);
-      toast.success('Priorities updated');
+      const res = await examApi.reorderExams(orderedIds);
+      if (res.status === 200) {
+        toast.success('Priority updated');
+      } else {
+        setExams(previousExams);
+        toast.error('Failed to save order');
+      }
     } catch {
       setExams(previousExams);
-      toast.error('Failed to update priorities');
+      toast.error('Failed to save order');
     }
   };
 
@@ -569,7 +569,7 @@ export default function Exams() {
             <SortableContext items={validExams.map(e => e._id)} strategy={verticalListSortingStrategy}>
               <div className="exams-list">
                 {validExams.map((exam, idx) => (
-                  <SortableExamCard
+                  <SortableExam
                     key={exam._id}
                     exam={exam}
                     idx={idx}
