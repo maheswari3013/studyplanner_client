@@ -35,8 +35,18 @@ const Auth = () => {
   }, [theme]);
 
   useEffect(() => {
+    const getApiOrigin = () => {
+      const url = import.meta.env.VITE_API_URL || 'https://studyplanner-api-awmh.onrender.com/api';
+      try {
+        return new URL(url).origin;
+      } catch {
+        return 'https://studyplanner-api-awmh.onrender.com';
+      }
+    };
+    const apiOrigin = getApiOrigin();
+
     const handler = async (event) => {
-      if (event.origin !== 'https://studyplanner-api-awmh.onrender.com') return;
+      if (event.origin !== apiOrigin) return;
 
       if (event.data?.type === 'google-login-success') {
         localStorage.setItem('token', event.data.token);
@@ -59,7 +69,17 @@ const Auth = () => {
   }, [fetchUser, navigate, setAuthData]);
 
   const handleGoogleLogin = () => {
-    window.open('https://studyplanner-api-awmh.onrender.com/api/auth/google/login', '_blank', 'width=500,height=600');
+    const getApiOrigin = () => {
+      const url = import.meta.env.VITE_API_URL || 'https://studyplanner-api-awmh.onrender.com/api';
+      try {
+        return new URL(url).origin;
+      } catch {
+        return 'https://studyplanner-api-awmh.onrender.com';
+      }
+    };
+    const apiOrigin = getApiOrigin();
+    const clientOrigin = window.location.origin;
+    window.open(`${apiOrigin}/api/auth/google/login?origin=${encodeURIComponent(clientOrigin)}`, '_blank', 'width=500,height=600');
   };
 
   const onChange = (e) => {

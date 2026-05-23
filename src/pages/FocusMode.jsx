@@ -1,40 +1,53 @@
 import { useEffect, useState } from 'react';
-import { X, Zap, Moon, Sun } from 'lucide-react';
+import { X, Zap, Moon, Sun, Maximize2 } from 'lucide-react';
 import StudyTimer from '../components/StudyTimer';
 import '../assets/FocusMode.css';
 
-export default function FocusMode({ block, onClose, onComplete, onNeedMoreTime }) {
+export default function FocusMode({
+  block,
+  onClose,
+  onComplete,
+  onNeedMoreTime
+}) {
   const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+
     const enterFullscreen = async () => {
       try {
-        await document.documentElement.requestFullscreen();
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
       } catch (err) {
-        console.log('Fullscreen not supported:', err);
+        console.log(err);
       }
     };
+
     enterFullscreen();
 
     const handleKeyDown = (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+      }
+
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (confirm('Exit Focus Mode? Your timer will pause.')) {
-          handleClose();
-        }
+
+        const ok = window.confirm(
+          'Exit Focus Mode? Timer will pause.'
+        );
+
+        if (ok) handleClose();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
 
-    const preventLeave = (e) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', preventLeave);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('beforeunload', preventLeave);
+
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
@@ -45,42 +58,66 @@ export default function FocusMode({ block, onClose, onComplete, onNeedMoreTime }
     if (document.fullscreenElement) {
       document.exitFullscreen();
     }
+
     onClose();
   };
 
   return (
-    <div className={`focus-overlay ${isDark? 'dark' : 'light'}`}>
-      <div className="focus-particles" />
+    <div
+      className={`focus-overlay ${isDark ? 'dark' : 'light'} ${
+        mounted ? 'show' : ''
+      }`}
+    >
+      <div className="focus-bg-orb orb1"></div>
+      <div className="focus-bg-orb orb2"></div>
+      <div className="focus-bg-grid"></div>
 
       <div className="focus-controls">
         <button
+          className="focus-btn"
           onClick={() => setIsDark(!isDark)}
-          className="focus-btn theme-btn"
-          title={isDark? 'Light mode' : 'Dark mode'}
         >
-          {isDark? <Sun size={20} /> : <Moon size={20} />}
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         <button
-          onClick={handleClose}
-          className="focus-btn close-btn"
-          title="Exit (ESC)"
+          className="focus-btn"
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen();
+            }
+          }}
         >
-          <X size={20} />
+          <Maximize2 size={18} />
+        </button>
+
+        <button
+          className="focus-btn close-btn"
+          onClick={handleClose}
+        >
+          <X size={18} />
         </button>
       </div>
 
       <div className="focus-content">
         <div className="focus-header">
           <div className="focus-logo">
-            <Zap size={24} />
+            <Zap size={26} />
           </div>
-          <h2 className="focus-title">Focus Mode</h2>
+
+          <div>
+            <h1 className="focus-title">Deep Focus</h1>
+            <p className="focus-subtitle">
+              Stay locked in. One task at a time.
+            </p>
+          </div>
         </div>
 
         <div
           className="focus-timer-card"
-          style={{ borderTop: `3px solid ${block.color || '#667eea'}` }}
+          style={{
+            borderTop: `4px solid ${block.color || '#6366f1'}`
+          }}
         >
           <StudyTimer
             block={block}
@@ -88,14 +125,16 @@ export default function FocusMode({ block, onClose, onComplete, onNeedMoreTime }
               onComplete(id);
               handleClose();
             }}
-            onNeedMoreTime={(id, duration) => onNeedMoreTime(id, duration)}
+            onNeedMoreTime={(id, duration) =>
+              onNeedMoreTime(id, duration)
+            }
             onClose={handleClose}
           />
         </div>
 
-        <p className="focus-hint">
-          Press <kbd>ESC</kbd> to exit
-        </p>
+        <div className="focus-footer">
+          <span>ESC to exit</span>
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, Users, Server, AlertTriangle, RefreshCw, Shield, Cpu, HardDrive } from 'lucide-react';
 import API from '../api/axios';
 import toast, { Toaster } from 'react-hot-toast';
+import DashboardLayout from '../components/DashboardLayout';
+import GlassCard from '../components/GlassCard';
+import StyledButton from '../components/StyledButton';
 import '../assets/AdminDashboard.css';
 
 export default function AdminDashboard() {
@@ -16,7 +19,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchAdminData();
-    const interval = setInterval(fetchAdminData, 30000); // Auto-refresh every 30s
+    const interval = setInterval(fetchAdminData, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -47,127 +50,134 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading) return <div className="admin-loading">Loading admin dashboard...</div>;
+  if (loading) return (
+    <DashboardLayout>
+      <div className="admin-loading">Loading admin dashboard...</div>
+    </DashboardLayout>
+  );
   
   if (error) return (
-    <div className="admin-container">
-      <div className="admin-error">
-        <Shield size={48} />
-        <h2>Access Denied</h2>
-        <p>{error}</p>
-        <button onClick={() => navigate('/agenda')} className="btn-back">
-          Back to Dashboard
-        </button>
+    <DashboardLayout>
+      <div className="admin-container">
+        <GlassCard className="admin-error">
+          <Shield size={48} />
+          <h2>Access Denied</h2>
+          <p>{error}</p>
+          <StyledButton onClick={() => navigate('/agenda')} variant="primary">
+            Back to Dashboard
+          </StyledButton>
+        </GlassCard>
       </div>
-    </div>
+    </DashboardLayout>
   );
 
   return (
-    <div className="admin-container">
-      <Toaster position="top-right" />
-      
-      <div className="admin-header">
-        <div className="admin-title-row">
-          <Shield size={32} />
-          <h1 className="admin-title">System Monitor</h1>
-          <span className={`status-badge ${health?.status === 'ok' ? 'status-ok' : 'status-error'}`}>
-            {health?.status === 'ok' ? 'Online' : 'Degraded'}
-          </span>
+    <DashboardLayout>
+      <div className="admin-container">
+        <Toaster position="top-right" />
+        
+        <div className="admin-header">
+          <div className="admin-title-row">
+            <Shield size={32} />
+            <h1 className="admin-title">System Monitor</h1>
+            <span className={`status-badge ${health?.status === 'ok' ? 'status-ok' : 'status-error'}`}>
+              {health?.status === 'ok' ? 'Online' : 'Degraded'}
+            </span>
+          </div>
+          <StyledButton 
+            onClick={fetchAdminData} 
+            disabled={refreshing}
+            icon={RefreshCw}
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </StyledButton>
         </div>
-        <button 
-          onClick={fetchAdminData} 
-          className="btn-refresh"
-          disabled={refreshing}
-        >
-          <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
-          Refresh
-        </button>
+
+        <div className="stats-grid">
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-server">
+              <Server size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">DB Status</p>
+              <p className="stat-value">{health?.db || 'unknown'}</p>
+              <p className="stat-sub">Uptime: {health?.uptime || 0}m</p>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-cpu">
+              <Cpu size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">CPU Load</p>
+              <p className="stat-value">{health?.cpu || 0}</p>
+              <p className="stat-sub">Node {health?.nodeVersion}</p>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-memory">
+              <HardDrive size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Memory</p>
+              <p className="stat-value">{health?.memory?.used || 0} MB</p>
+              <p className="stat-sub">Heap used</p>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-users">
+              <Users size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Active Users</p>
+              <p className="stat-value">{metrics?.users?.active24h || 0}</p>
+              <p className="stat-sub">Last 24h / {metrics?.users?.total || 0} total</p>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-blocks">
+              <Activity size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Blocks Today</p>
+              <p className="stat-value">{metrics?.blocks?.completedToday || 0}</p>
+              <p className="stat-sub">{metrics?.blocks?.overdue || 0} overdue</p>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-errors">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">System Errors</p>
+              <p className="stat-value">{(errors?.cronFailures || 0) + (errors?.schedulerFailures || 0)}</p>
+              <p className="stat-sub">Cron: {errors?.cronFailures || 0} | Sched: {errors?.schedulerFailures || 0}</p>
+            </div>
+          </GlassCard>
+        </div>
+
+        <GlassCard className="error-section">
+          <h2 className="section-title">Error Breakdown</h2>
+          <div className="error-grid">
+            <div className="error-card">
+              <h3>Cron Failures</h3>
+              <p className="error-count">{errors?.cronFailures || 0}</p>
+              <p className="error-desc">Overdue blocks not rescheduled &gt; 1h</p>
+            </div>
+            <div className="error-card">
+              <h3>Scheduler Failures</h3>
+              <p className="error-count">{errors?.schedulerFailures || 0}</p>
+              <p className="error-desc">Topics with 10h+ unscheduled</p>
+            </div>
+          </div>
+          <p className="last-checked">Last checked: {new Date(errors?.lastChecked).toLocaleTimeString()}</p>
+        </GlassCard>
       </div>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon stat-server">
-            <Server size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">DB Status</p>
-            <p className="stat-value">{health?.db || 'unknown'}</p>
-            <p className="stat-sub">Uptime: {health?.uptime || 0}m</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-cpu">
-            <Cpu size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">CPU Load</p>
-            <p className="stat-value">{health?.cpu || 0}</p>
-            <p className="stat-sub">Node {health?.nodeVersion}</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-memory">
-            <HardDrive size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Memory</p>
-            <p className="stat-value">{health?.memory?.used || 0} MB</p>
-            <p className="stat-sub">Heap used</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-users">
-            <Users size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Active Users</p>
-            <p className="stat-value">{metrics?.users?.active24h || 0}</p>
-            <p className="stat-sub">Last 24h / {metrics?.users?.total || 0} total</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-blocks">
-            <Activity size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Blocks Today</p>
-            <p className="stat-value">{metrics?.blocks?.completedToday || 0}</p>
-            <p className="stat-sub">{metrics?.blocks?.overdue || 0} overdue</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-errors">
-            <AlertTriangle size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">System Errors</p>
-            <p className="stat-value">{(errors?.cronFailures || 0) + (errors?.schedulerFailures || 0)}</p>
-            <p className="stat-sub">Cron: {errors?.cronFailures || 0} | Sched: {errors?.schedulerFailures || 0}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="error-section">
-        <h2 className="section-title">Error Breakdown</h2>
-        <div className="error-grid">
-          <div className="error-card">
-            <h3>Cron Failures</h3>
-            <p className="error-count">{errors?.cronFailures || 0}</p>
-            <p className="error-desc">Overdue blocks not rescheduled &gt; 1h</p>
-          </div>
-          <div className="error-card">
-            <h3>Scheduler Failures</h3>
-            <p className="error-count">{errors?.schedulerFailures || 0}</p>
-            <p className="error-desc">Topics with 10h+ unscheduled</p>
-          </div>
-        </div>
-        <p className="last-checked">Last checked: {new Date(errors?.lastChecked).toLocaleTimeString()}</p>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

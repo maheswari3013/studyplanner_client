@@ -11,25 +11,25 @@ export default function NotFound() {
         <div className="notfound-icon">
           <SearchX size={80} />
         </div>
-        
+
         <h1 className="notfound-title">404</h1>
         <h2 className="notfound-subtitle">Page Not Found</h2>
-        
+
         <p className="notfound-text">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        
+
         <div className="notfound-actions">
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="btn-notfound btn-secondary"
           >
             <ArrowLeft size={18} />
             Go Back
           </button>
-          
-          <button 
-            onClick={() => navigate('/dashboard')} 
+
+          <button
+            onClick={() => navigate('/dashboard')}
             className="btn-notfound btn-primary"
           >
             <Home size={18} />

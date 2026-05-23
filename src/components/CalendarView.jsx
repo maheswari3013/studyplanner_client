@@ -5,7 +5,16 @@ import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, 
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/CalendarView.css';
 
-const GOOGLE_AUTH_ORIGIN = 'https://studyplanner-api-awmh.onrender.com';
+const getGoogleAuthOrigin = () => {
+  const url = import.meta.env.VITE_API_URL || 'https://studyplanner-api-awmh.onrender.com/api';
+  try {
+    return new URL(url).origin;
+  } catch {
+    return 'https://studyplanner-api-awmh.onrender.com';
+  }
+};
+
+const GOOGLE_AUTH_ORIGIN = getGoogleAuthOrigin();
 
 export default function CalendarView() {
   const [blocks, setBlocks] = useState([]);
@@ -281,8 +290,9 @@ export default function CalendarView() {
     } catch (err) {
       if (err.response?.data?.action === 'CONNECT_CALENDAR' || err.response?.data?.needsAuth) {
         toast('Connect Google Calendar first');
+        const clientOrigin = window.location.origin;
         const popup = window.open(
-          `${GOOGLE_AUTH_ORIGIN}/api/auth/google/calendar`,
+          `${GOOGLE_AUTH_ORIGIN}/api/auth/google/calendar?origin=${encodeURIComponent(clientOrigin)}`,
           'gcal-connect',
           'width=500,height=600'
         );

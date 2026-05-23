@@ -324,3 +324,91 @@ html.dark .glass-card {
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
 }
+
+/* Fix browser-default password reveal (eye icon) and clear buttons in dark mode */
+html.dark input::-ms-reveal,
+html.dark input::-ms-clear {
+  filter: invert(1);
+}
+
+/* Global dark mode placeholder contrast enhancement */
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgba(245, 245, 242, 0.45) !important;
+}
+
+/* Global Styled Buttons matching premium Exams theme */
+.btn-primary,
+.btn-secondary,
+.btn-generate,
+.btn-danger {
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.btn-primary,
+.btn-generate {
+  background: #556B58;
+  color: #fff;
+  border-color: rgba(85, 107, 88, 0.2);
+  box-shadow: 0 14px 28px rgba(85, 107, 88, 0.18);
+}
+
+.btn-primary:hover,
+.btn-generate:hover:not(:disabled) {
+  background: linear-gradient(135deg, #556B58, #6E8A73);
+  transform: translateY(-3px);
+  box-shadow: 0 18px 36px rgba(85, 107, 88, 0.24);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.66);
+  color: #44403c;
+  border-color: rgba(28, 25, 23, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+html.dark .btn-secondary {
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(245, 245, 242, 0.76);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.btn-secondary:hover {
+  background: rgba(85, 107, 88, 0.08);
+  color: #3f5644;
+  border-color: rgba(85, 107, 88, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(28, 25, 23, 0.08);
+}
+
+html.dark .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #F5F5F2;
+  border-color: rgba(110, 138, 115, 0.28);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+html.dark .btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(239, 68, 68, 0.2);
+}

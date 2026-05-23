@@ -7,6 +7,9 @@ import {
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
 import toast, { Toaster } from 'react-hot-toast';
+import DashboardLayout from '../components/DashboardLayout';
+import GlassCard from '../components/GlassCard';
+import StyledButton from '../components/StyledButton';
 import '../assets/Dashboard.css';
 
 const AFFIRMATIONS = [
@@ -24,19 +27,19 @@ const CircularProgress = ({ percent, label, subtext }) => {
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const safePercent = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+  const safePercent = Number.isFinite(percent)? Math.max(0, Math.min(100, percent)) : 0;
   const offset = circumference - (safePercent / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="transform -rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={radius} stroke="#E5E7EB" strokeWidth={strokeWidth} fill="none" />
+          <circle cx={size / 2} cy={size / 2} r={radius} stroke="rgba(85,107,88,0.15)" strokeWidth={strokeWidth} fill="none" />
           <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="#2563EB"
+            stroke="#556B58"
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={circumference}
@@ -153,261 +156,265 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="dashboard-loading">
-        <div className="spinner"></div>
-        <p>Loading your dashboard...</p>
-      </div>
+      <DashboardLayout>
+        <div className="dashboard-loading">
+          <div className="spinner"></div>
+          <p>Loading your dashboard...</p>
+        </div>
+      </DashboardLayout>
     );
   }
 
   const isHeavyWeek = stats.todayBlocks >= 3;
 
   return (
-    <div className="dashboard-container">
-      <Toaster position="top-right" />
+    <DashboardLayout>
+      <div className="dashboard-container">
+        <Toaster position="top-right" />
 
-      <div className="dashboard-header">
-        <div>
-          <h1 className="dashboard-title">
-            {getGreeting()}, {user?.username || 'Student'}!
-          </h1>
-          <p className="dashboard-subtitle">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </p>
-        </div>
-        {isHeavyWeek && (
-          <div className="affirmation-card">
-            <Heart size={20} />
-            <p>{affirmation}</p>
+        <div className="dashboard-header">
+          <div>
+            <h1 className="dashboard-title">
+              {getGreeting()}, {user?.username || 'Student'}!
+            </h1>
+            <p className="dashboard-subtitle">
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
           </div>
-        )}
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon stat-today">
-            <Clock size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Today's Progress</p>
-            <p className="stat-value">{stats.completedToday}/{stats.todayBlocks}</p>
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${getProgressPercent()}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-exams">
-            <BookOpen size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Upcoming Exams</p>
-            <p className="stat-value">{stats.upcomingExams}</p>
-            <p className="stat-sub">Next 30 days</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-topics">
-            <Target size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Active Topics</p>
-            <p className="stat-value">{stats.totalTopics}</p>
-            <p className="stat-sub">In progress</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon stat-streak">
-            <TrendingUp size={24} />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Study Streak</p>
-            <p className="stat-value">{stats.studyStreak} days</p>
-            <p className="stat-sub">Keep it up!</p>
-          </div>
-        </div>
-      </div>
-
-      {subjectProgress.length > 0 && (
-        <div className="content-section">
-          <div className="section-header">
-            <h2 className="section-title">
-              <Target size={20} />
-              Revision Plan Progress
-            </h2>
-          </div>
-          <div className="progress-rings">
-            {subjectProgress.map(sub => {
-              const completedHours = Number(sub.completed) || 0;
-              const totalHours = Number(sub.planned) || 0;
-              const percent = totalHours > 0 ? (completedHours / totalHours) * 100 : 0;
-
-              return (
-                <div key={sub.subject} className="ring-item">
-                  <CircularProgress
-                    percent={percent}
-                    label={sub.subject}
-                    subtext={`${completedHours.toFixed(1)}/${totalHours.toFixed(1)}h`}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="dashboard-content">
-        <div className="content-section">
-          <div className="section-header">
-            <h2 className="section-title">
-              <Clock size={20} />
-              Today's Study Blocks
-            </h2>
-            <button onClick={() => navigate('/agenda')} className="btn-link">
-              View All
-            </button>
-          </div>
-
-          {todayBlocks.length === 0? (
-            <div className="empty-state">
-              <CheckCircle2 size={48} />
-              <p>No blocks scheduled for today</p>
-              <button onClick={() => navigate('/calendar')} className="btn-primary">
-                Plan Your Day
-              </button>
-            </div>
-          ) : (
-            <div className="blocks-list">
-              {todayBlocks.slice(0, 5).map(block => (
-                <div key={block._id} className={`block-item ${block.completed? 'completed' : ''}`}>
-                  <div className="block-time">
-                    {new Date(`1970-01-01T${block.time}:00`).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
-                  <div className="block-content">
-                    <h4 className="block-title">{block.topic?.name || block.topic}</h4>
-                    <p className="block-duration">{block.duration} minutes</p>
-                  </div>
-                  {!block.completed && (
-                    <button
-                      onClick={() => completeBlock(block._id)}
-                      className="btn-complete"
-                    >
-                      <CheckCircle2 size={18} />
-                    </button>
-                  )}
-                  {block.completed && (
-                    <div className="block-done">
-                      <CheckCircle2 size={18} />
-                    </div>
-                  )}
-                </div>
-              ))}
+          {isHeavyWeek && (
+            <div className="affirmation-card">
+              <Heart size={20} />
+              <p>{affirmation}</p>
             </div>
           )}
         </div>
 
-        <div className="content-section">
-          <div className="section-header">
-            <h2 className="section-title">
-              <Zap size={20} />
-              Confidence Tracker
-            </h2>
-          </div>
-
-          {upcomingExams.length === 0? (
-            <div className="empty-state">
-              <BookOpen size={48} />
-              <p>No upcoming exams to track</p>
+        <div className="stats-grid">
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-today">
+              <Clock size={24} />
             </div>
-          ) : (
-            <div className="confidence-list">
-              {upcomingExams.map(exam => {
-                const daysLeft = Math.ceil((new Date(exam.examDate) - new Date()) / (1000 * 60 * 60 * 24));
-                const readiness = getReadinessScore(exam._id);
-                const level = confidence[exam._id] || 0;
+            <div className="stat-content">
+              <p className="stat-label">Today's Progress</p>
+              <p className="stat-value">{stats.completedToday}/{stats.todayBlocks}</p>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${getProgressPercent()}%` }}
+                ></div>
+              </div>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-exams">
+              <BookOpen size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Upcoming Exams</p>
+              <p className="stat-value">{stats.upcomingExams}</p>
+              <p className="stat-sub">Next 30 days</p>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-topics">
+              <Target size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Active Topics</p>
+              <p className="stat-value">{stats.totalTopics}</p>
+              <p className="stat-sub">In progress</p>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="stat-card">
+            <div className="stat-icon stat-streak">
+              <TrendingUp size={24} />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Study Streak</p>
+              <p className="stat-value">{stats.studyStreak} days</p>
+              <p className="stat-sub">Keep it up!</p>
+            </div>
+          </GlassCard>
+        </div>
+
+        {subjectProgress.length > 0 && (
+          <GlassCard className="content-section">
+            <div className="section-header">
+              <h2 className="section-title">
+                <Target size={20} />
+                Revision Plan Progress
+              </h2>
+            </div>
+            <div className="progress-rings">
+              {subjectProgress.map(sub => {
+                const completedHours = Number(sub.completed) || 0;
+                const totalHours = Number(sub.planned) || 0;
+                const percent = totalHours > 0? (completedHours / totalHours) * 100 : 0;
 
                 return (
-                  <div key={exam._id} className="confidence-item">
-                    <div className="confidence-header">
-                      <h4>{exam.subject}</h4>
-                      <span className="days-left">{daysLeft}d left</span>
-                    </div>
-                    <div className="readiness-bar">
-                      <div className="readiness-fill" style={{ width: `${readiness}%` }}>
-                        <span>{readiness}% Ready</span>
-                      </div>
-                    </div>
-                    <div className="confidence-buttons">
-                      {[1,2,3,4].map(l => (
-                        <button
-                          key={l}
-                          className={`conf-btn ${level === l? 'active' : ''}`}
-                          onClick={() => updateConfidence(exam._id, l)}
-                        >
-                          <Smile size={16} />
-                          {getConfidenceLabel(l)}
-                        </button>
-                      ))}
-                    </div>
+                  <div key={sub.subject} className="ring-item">
+                    <CircularProgress
+                      percent={percent}
+                      label={sub.subject}
+                      subtext={`${completedHours.toFixed(1)}/${totalHours.toFixed(1)}h`}
+                    />
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
+          </GlassCard>
+        )}
 
-      {studyLogs.length > 0 && (
-        <div className="content-section">
-          <div className="section-header">
-            <h2 className="section-title">
-              <BarChart3 size={20} />
-              Study Log: Planned vs Actual
-            </h2>
-          </div>
-          <div className="logs-table-wrapper">
-            <table className="logs-table">
-              <thead>
-                <tr>
-                  <th>Subject</th>
-                  <th>Planned Hours</th>
-                  <th>Actual Hours</th>
-                  <th>Difference</th>
-                </tr>
-              </thead>
-              <tbody>
-                {studyLogs.map(log => {
-                  const diff = log.actual - log.planned;
+        <div className="dashboard-content">
+          <GlassCard className="content-section">
+            <div className="section-header">
+              <h2 className="section-title">
+                <Clock size={20} />
+                Today's Study Blocks
+              </h2>
+              <button onClick={() => navigate('/agenda')} className="btn-link">
+                View All
+              </button>
+            </div>
+
+            {todayBlocks.length === 0? (
+              <div className="empty-state">
+                <CheckCircle2 size={48} />
+                <p>No blocks scheduled for today</p>
+                <StyledButton onClick={() => navigate('/calendar')} variant="primary">
+                  Plan Your Day
+                </StyledButton>
+              </div>
+            ) : (
+              <div className="blocks-list">
+                {todayBlocks.slice(0, 5).map(block => (
+                  <div key={block._id} className={`block-item ${block.completed? 'completed' : ''}`}>
+                    <div className="block-time">
+                      {new Date(`1970-01-01T${block.time}:00`).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                    <div className="block-content">
+                      <h4 className="block-title">{block.topic?.name || block.topic}</h4>
+                      <p className="block-duration">{block.duration} minutes</p>
+                    </div>
+                    {!block.completed && (
+                      <button
+                        onClick={() => completeBlock(block._id)}
+                        className="btn-complete"
+                      >
+                        <CheckCircle2 size={18} />
+                      </button>
+                    )}
+                    {block.completed && (
+                      <div className="block-done">
+                        <CheckCircle2 size={18} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+
+          <GlassCard className="content-section">
+            <div className="section-header">
+              <h2 className="section-title">
+                <Zap size={20} />
+                Confidence Tracker
+              </h2>
+            </div>
+
+            {upcomingExams.length === 0? (
+              <div className="empty-state">
+                <BookOpen size={48} />
+                <p>No upcoming exams to track</p>
+              </div>
+            ) : (
+              <div className="confidence-list">
+                {upcomingExams.map(exam => {
+                  const daysLeft = Math.ceil((new Date(exam.examDate) - new Date()) / (1000 * 60 * 60 * 24));
+                  const readiness = getReadinessScore(exam._id);
+                  const level = confidence[exam._id] || 0;
+
                   return (
-                    <tr key={log.subject}>
-                      <td>{log.subject}</td>
-                      <td>{log.planned}h</td>
-                      <td>{log.actual}h</td>
-                      <td className={diff >= 0? 'positive' : 'negative'}>
-                        {diff > 0? '+' : ''}{diff}h
-                      </td>
-                    </tr>
+                    <div key={exam._id} className="confidence-item">
+                      <div className="confidence-header">
+                        <h4>{exam.subject}</h4>
+                        <span className="days-left">{daysLeft}d left</span>
+                      </div>
+                      <div className="readiness-bar">
+                        <div className="readiness-fill" style={{ width: `${readiness}%` }}>
+                          <span>{readiness}% Ready</span>
+                        </div>
+                      </div>
+                      <div className="confidence-buttons">
+                        {[1,2,3,4].map(l => (
+                          <button
+                            key={l}
+                            className={`conf-btn ${level === l? 'active' : ''}`}
+                            onClick={() => updateConfidence(exam._id, l)}
+                          >
+                            <Smile size={16} />
+                            {getConfidenceLabel(l)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            )}
+          </GlassCard>
         </div>
-      )}
-    </div>
+
+        {studyLogs.length > 0 && (
+          <GlassCard className="content-section">
+            <div className="section-header">
+              <h2 className="section-title">
+                <BarChart3 size={20} />
+                Study Log: Planned vs Actual
+              </h2>
+            </div>
+            <div className="logs-table-wrapper">
+              <table className="logs-table">
+                <thead>
+                  <tr>
+                    <th>Subject</th>
+                    <th>Planned Hours</th>
+                    <th>Actual Hours</th>
+                    <th>Difference</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studyLogs.map(log => {
+                    const diff = log.actual - log.planned;
+                    return (
+                      <tr key={log.subject}>
+                        <td>{log.subject}</td>
+                        <td>{log.planned}h</td>
+                        <td>{log.actual}h</td>
+                        <td className={diff >= 0? 'positive' : 'negative'}>
+                          {diff > 0? '+' : ''}{diff}h
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

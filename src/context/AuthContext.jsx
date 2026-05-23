@@ -56,8 +56,18 @@ export const AuthProvider = ({ children }) => {
   }, [fetchUser]);
 
   useEffect(() => {
+    const getGoogleAuthOrigin = () => {
+      const url = import.meta.env.VITE_API_URL || 'https://studyplanner-api-awmh.onrender.com/api';
+      try {
+        return new URL(url).origin;
+      } catch {
+        return 'https://studyplanner-api-awmh.onrender.com';
+      }
+    };
+    const googleAuthOrigin = getGoogleAuthOrigin();
+
     const handler = async (event) => {
-      if (event.origin !== 'https://studyplanner-api-awmh.onrender.com') return;
+      if (event.origin !== googleAuthOrigin) return;
 
       if (event.data?.type === 'google-login-success') {
         localStorage.setItem('token', event.data.token);

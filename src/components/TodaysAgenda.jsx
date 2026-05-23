@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { scheduleApi } from '../api/scheduleApi';
 import StudyTimer from '../components/StudyTimer';
 import AgendaBlock from '../components/AgendaBlock';
+import DashboardLayout from '../components/DashboardLayout';
+import GlassCard from '../components/GlassCard';
+import StyledButton from '../components/StyledButton';
 import toast from 'react-hot-toast';
 import '../assets/TodaysAgenda.css';
 
@@ -49,9 +52,9 @@ export default function TodaysAgenda() {
   };
 
   const markComplete = async (id) => {
-    setIsCompleting(prev => ({ ...prev, [id]: true }));
+    setIsCompleting(prev => ({...prev, [id]: true }));
     try {
-      setBlocks(prev => prev.map(b => b._id === id ? { ...b, completed: true, missed: false } : b));
+      setBlocks(prev => prev.map(b => b._id === id? {...b, completed: true, missed: false } : b));
       const res = await scheduleApi.completeBlock(id);
       if (res?.notFound) {
         toast('This session was updated. Refreshing...');
@@ -63,35 +66,31 @@ export default function TodaysAgenda() {
       toast.error('Failed to complete');
     } finally {
       await fetchToday();
-      setIsCompleting(prev => ({ ...prev, [id]: false }));
+      setIsCompleting(prev => ({...prev, [id]: false }));
     }
   };
 
-  // UPDATED: Keep missed blocks visible in red + reschedule
   const markMissed = async (id) => {
-    setIsCompleting(prev => ({ ...prev, [id]: true }));
+    setIsCompleting(prev => ({...prev, [id]: true }));
     try {
-      // Optimistic update - turn red immediately
-      setBlocks(prev => prev.map(b => b._id === id ? { ...b, missed: true, completed: false } : b));
+      setBlocks(prev => prev.map(b => b._id === id? {...b, missed: true, completed: false } : b));
       setActiveTimerBlock(null);
 
       const res = await scheduleApi.markMissed(id);
       if (res?.notFound) {
         toast('This session was updated. Refreshing...');
       } else {
-        console.log('Missed response:', res.data);
         toast.success(`Marked as missed. Rescheduled ${res.data.newBlocksCreated} new blocks`);
       }
     } catch (err) {
       if (err.response?.status === 404) {
         toast('This session was updated. Refreshing...');
       } else {
-        console.error('Missed error:', err.response?.data);
         toast.error(err.response?.data?.msg || 'Failed to mark missed');
       }
     } finally {
       await fetchToday();
-      setIsCompleting(prev => ({ ...prev, [id]: false }));
+      setIsCompleting(prev => ({...prev, [id]: false }));
     }
   };
 
@@ -206,130 +205,132 @@ export default function TodaysAgenda() {
   }
 
   const groupedBlocks = sortedBlocks.reduce((groups, block) => {
-    const dateKey = block.date ? block.date.split('T')[0] : 'unknown';
+    const dateKey = block.date? block.date.split('T')[0] : 'unknown';
     if (!groups[dateKey]) groups[dateKey] = [];
     groups[dateKey].push(block);
     return groups;
   }, {});
 
   return (
-    <div className="agenda-container">
-      <div className="agenda-header">
-        <h2>Today's Agenda</h2>
-        <button onClick={() => setShowDateModal(true)} disabled={generating} className="btn-generate-schedule">
-          {generating? 'Generating...' : 'Generate New Schedule'}
-        </button>
-      </div>
-
-      {activeTimerBlock && (
-        <StudyTimer
-          block={activeTimerBlock}
-          onComplete={markComplete}
-          onNeedMoreTime={handleNeedMoreTime}
-          onClose={() => setActiveTimerBlock(null)}
-        />
-      )}
-
-      {showDateModal && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <h3>Generate New Schedule</h3>
-            <p className="modal-subtitle">This will delete all existing blocks.</p>
-
-            <label>Start from:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-            />
-
-            <label>Day starts at (0-23):</label>
-            <input
-              type="number"
-              min="0"
-              max="23"
-              value={dayStartsAt}
-              onChange={(e) => setDayStartsAt(e.target.value)}
-            />
-
-            <label>Day ends at (1-23):</label>
-            <input
-              type="number"
-              min="1"
-              max="23"
-              value={dayEndsAt}
-              onChange={(e) => setDayEndsAt(e.target.value)}
-            />
-            <small>For full day use 0 to 23. For overnight use like 22 to 6.</small>
-
-            <div className="modal-actions">
-              <button onClick={generateSchedule} disabled={generating}>
-                {generating? 'Generating...' : startDate? 'Start from this date' : 'Start today'}
-              </button>
-              <button type="button" onClick={() => { setShowDateModal(false); setStartDate(''); }}>
-                Cancel
-              </button>
-            </div>
-          </div>
+    <DashboardLayout>
+      <div className="agenda-container">
+        <div className="agenda-header">
+          <h2 className="agenda-title">Today's Agenda</h2>
+          <StyledButton onClick={() => setShowDateModal(true)} disabled={generating} variant="primary">
+            {generating? 'Generating...' : 'Generate New Schedule'}
+          </StyledButton>
         </div>
-      )}
 
-      {loading? (
-        <p className="loading-text">Loading...</p>
-      ) : sortedBlocks.length === 0? (
-        <p className="empty-state">No study blocks for today. Click generate!</p>
-      ) : (
-        Object.keys(groupedBlocks).sort().map((date) => {
-          const dayBlocks = groupedBlocks[date];
-          const lastBlock = dayBlocks[dayBlocks.length - 1];
-          const dayEndsWithBreak = lastBlock && (lastBlock.isBreak || lastBlock.type === 'Break');
-          return (
-            <div key={date} className="agenda-day-group">
-              <div className="agenda-day-header">
-                <h3>{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
-              </div>
-              {dayBlocks.map(block => (
-                <AgendaBlock
-                  key={block._id}
-                  block={block}
-                  overdue={isOverdue(block)}
-                  isCompleting={!!isCompleting[block._id]}
-                  onEdit={openEditModal}
-                  onDelete={deleteBlock}
-                  onStartTimer={setActiveTimerBlock}
-                  onFocus={(focusBlock) => navigate('/focus', { state: { block: focusBlock } })}
-                  onComplete={markComplete}
-                  onMissed={markMissed}
-                  onPending={markPending}
-                />
-              ))}
-              {dayEndsWithBreak && (
-                <div className="day-end-warning">Day ends with break</div>
-              )}
-            </div>
-          );
-        })
-      )}
+        {activeTimerBlock && (
+          <StudyTimer
+            block={activeTimerBlock}
+            onComplete={markComplete}
+            onNeedMoreTime={handleNeedMoreTime}
+            onClose={() => setActiveTimerBlock(null)}
+          />
+        )}
 
-      {editingBlock && (
-        <div className="modal-backdrop" onClick={() => setEditingBlock(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>Edit Study Block</h3>
-            <form onSubmit={handleEditSubmit}>
-              <input placeholder="Subject" value={editForm.subject} onChange={e => setEditForm({...editForm, subject: e.target.value })} required />
-              <input placeholder="Topic" value={editForm.topic} onChange={e => setEditForm({...editForm, topic: e.target.value })} required />
-              <input type="number" placeholder="Duration (min)" value={editForm.duration} onChange={e => setEditForm({...editForm, duration: e.target.value })} required />
-              <input type="date" value={editForm.date} onChange={e => setEditForm({...editForm, date: e.target.value })} required />
-              <input type="time" value={editForm.time} onChange={e => setEditForm({...editForm, time: e.target.value })} required />
+        {showDateModal && (
+          <div className="modal-backdrop">
+            <GlassCard className="modal">
+              <h3>Generate New Schedule</h3>
+              <p className="modal-subtitle">This will delete all existing blocks.</p>
+
+              <label>Start from:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+
+              <label>Day starts at (0-23):</label>
+              <input
+                type="number"
+                min="0"
+                max="23"
+                value={dayStartsAt}
+                onChange={(e) => setDayStartsAt(e.target.value)}
+              />
+
+              <label>Day ends at (1-23):</label>
+              <input
+                type="number"
+                min="1"
+                max="23"
+                value={dayEndsAt}
+                onChange={(e) => setDayEndsAt(e.target.value)}
+              />
+              <small>For full day use 0 to 23. For overnight use like 22 to 6.</small>
+
               <div className="modal-actions">
-                <button type="submit">Save</button>
-                <button type="button" onClick={() => setEditingBlock(null)}>Cancel</button>
+                <StyledButton onClick={generateSchedule} disabled={generating} variant="primary">
+                  {generating? 'Generating...' : startDate? 'Start from this date' : 'Start today'}
+                </StyledButton>
+                <StyledButton type="button" onClick={() => { setShowDateModal(false); setStartDate(''); }} variant="secondary">
+                  Cancel
+                </StyledButton>
               </div>
-            </form>
+            </GlassCard>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {loading? (
+          <p className="loading-text">Loading...</p>
+        ) : sortedBlocks.length === 0? (
+          <p className="empty-state">No study blocks for today. Click generate!</p>
+        ) : (
+          Object.keys(groupedBlocks).sort().map((date) => {
+            const dayBlocks = groupedBlocks[date];
+            const lastBlock = dayBlocks[dayBlocks.length - 1];
+            const dayEndsWithBreak = lastBlock && (lastBlock.isBreak || lastBlock.type === 'Break');
+            return (
+              <div key={date} className="agenda-day-group">
+                <div className="agenda-day-header">
+                  <h3>{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+                </div>
+                {dayBlocks.map(block => (
+                  <AgendaBlock
+                    key={block._id}
+                    block={block}
+                    overdue={isOverdue(block)}
+                    isCompleting={!!isCompleting[block._id]}
+                    onEdit={openEditModal}
+                    onDelete={deleteBlock}
+                    onStartTimer={setActiveTimerBlock}
+                    onFocus={(focusBlock) => navigate('/focus', { state: { block: focusBlock } })}
+                    onComplete={markComplete}
+                    onMissed={markMissed}
+                    onPending={markPending}
+                  />
+                ))}
+                {dayEndsWithBreak && (
+                  <div className="day-end-warning">Day ends with break</div>
+                )}
+              </div>
+            );
+          })
+        )}
+
+        {editingBlock && (
+          <div className="modal-backdrop" onClick={() => setEditingBlock(null)}>
+            <GlassCard className="modal" onClick={e => e.stopPropagation()}>
+              <h3>Edit Study Block</h3>
+              <form onSubmit={handleEditSubmit}>
+                <input placeholder="Subject" value={editForm.subject} onChange={e => setEditForm({...editForm, subject: e.target.value })} required />
+                <input placeholder="Topic" value={editForm.topic} onChange={e => setEditForm({...editForm, topic: e.target.value })} required />
+                <input type="number" placeholder="Duration (min)" value={editForm.duration} onChange={e => setEditForm({...editForm, duration: e.target.value })} required />
+                <input type="date" value={editForm.date} onChange={e => setEditForm({...editForm, date: e.target.value })} required />
+                <input type="time" value={editForm.time} onChange={e => setEditForm({...editForm, time: e.target.value })} required />
+                <div className="modal-actions">
+                  <StyledButton type="submit" variant="primary">Save</StyledButton>
+                  <StyledButton type="button" onClick={() => setEditingBlock(null)} variant="secondary">Cancel</StyledButton>
+                </div>
+              </form>
+            </GlassCard>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }
