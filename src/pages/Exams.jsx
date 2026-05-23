@@ -14,13 +14,13 @@ const defaultAvailableHours = {
 
 function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence, editingExam }) {
   const sortable = useSortable({
-    id: exam?._id || `fallback-${idx}`,
-    disabled:!exam?._id ||!!editingExam // Error 4: Disable drag when editing
+    id: exam?._id || `temp-${idx}`,
+    disabled: !exam?._id || !!editingExam
   });
 
-  if (!exam?._id ||!sortable) return null;
+  if (!exam?._id || !sortable) return null;
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable || {};
 
   const style = {
     transform: CSS.Transform.toString(transform),

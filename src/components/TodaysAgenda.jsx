@@ -53,8 +53,12 @@ export default function TodaysAgenda() {
       setActiveTimerBlock(null);
       toast.success('Marked as complete!');
     } catch (err) {
-      toast.error('Failed to complete');
-      fetchToday();
+      if (err.response?.status === 404) {
+        toast('Schedule was regenerated. Refreshing...');
+      } else {
+        toast.error('Failed to complete');
+      }
+      await fetchToday();
     }
   };
 
@@ -73,8 +77,12 @@ export default function TodaysAgenda() {
       await fetchToday();
 
     } catch (err) {
-      console.error('Missed error:', err.response?.data);
-      toast.error(err.response?.data?.msg || 'Failed to mark missed');
+      if (err.response?.status === 404) {
+        toast('Schedule was regenerated. Refreshing...');
+      } else {
+        console.error('Missed error:', err.response?.data);
+        toast.error(err.response?.data?.msg || 'Failed to mark missed');
+      }
       await fetchToday();
     }
   };

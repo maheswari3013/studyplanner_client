@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import API from '../api/axios';
+import { scheduleApi } from '../api/scheduleApi';
 import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, Clock, Calendar as CalendarIcon, BookOpen, Zap, Coffee, FileWarning } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/CalendarView.css';
@@ -16,6 +17,8 @@ export default function CalendarView() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const googleAuthTimeout = useRef(null);
   const [loggingBlock, setLoggingBlock] = useState(null);
   const [actualMinutes, setActualMinutes] = useState('');
 
@@ -31,27 +34,47 @@ export default function CalendarView() {
   useEffect(() => {
     fetchData();
     checkGoogleConnection();
-    
-    const handleMessage = (event) => {
-      if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+
+    const handleMessage = async (event) => {
+      const message = event.data;
+      const success =
+        message === 'google-auth-success' ||
+        message?.type === 'GOOGLE_AUTH_SUCCESS';
+      const error =
+        message === 'google-auth-error' ||
+        message?.type === 'GOOGLE_AUTH_ERROR';
+
+      if (success) {
         toast.success('Google connected!');
-        checkGoogleConnection();
+        clearTimeout(googleAuthTimeout.current);
+        googleAuthTimeout.current = null;
+        setGoogleConnected(true);
+        await fetchData();
         setSyncing(false);
       }
-      if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-        toast.error('Google connect failed: ' + event.data.error);
+
+      if (error) {
+        const errMsg =
+          typeof message === 'object' ? message.error : 'Google auth failed';
+        toast.error('Google connect failed: ' + errMsg);
+        clearTimeout(googleAuthTimeout.current);
+        googleAuthTimeout.current = null;
         setSyncing(false);
       }
     };
+
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      clearTimeout(googleAuthTimeout.current);
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
-  
 
   const fetchData = async () => {
+    setScheduleLoading(true);
     try {
       const [blocksRes, examsRes] = await Promise.all([
-        API.get('/schedule'),
+        scheduleApi.getSchedule(),
         API.get('/exams')
       ]);
       setBlocks(blocksRes.data);
@@ -59,6 +82,8 @@ export default function CalendarView() {
     } catch (err) {
       console.error('Failed to fetch data:', err);
       toast.error('Failed to load schedule');
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -73,15 +98,32 @@ export default function CalendarView() {
   };
 
   const handleMarkMissed = async (blockId) => {
+    setScheduleLoading(true);
     try {
-      const res = await API.patch(`/schedule/${blockId}/missed`);
+      const latestBlock = blocks.find(b => b._id === blockId);
+      if (!latestBlock) {
+        toast('Schedule was regenerated. Refreshing...');
+        await fetchData();
+        setSelectedDay(null);
+        return;
+      }
+
+      const res = await scheduleApi.markMissed(latestBlock._id);
       if (res.data.success) {
         toast.success(`Rescheduled! Created ${res.data.newBlocksCreated} new blocks`);
-        fetchData();
+        await fetchData();
         setSelectedDay(null);
       }
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to reschedule');
+      if (err.response?.status === 404) {
+        toast('Schedule was regenerated. Refreshing...');
+        await fetchData();
+        setSelectedDay(null);
+      } else {
+        toast.error(err.response?.data?.msg || 'Failed to reschedule');
+      }
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -227,6 +269,7 @@ export default function CalendarView() {
 const syncGoogle = async () => {
   setSyncing(true);
   let openedPopup = false;
+
   try {
     const res = await API.post('/schedule/google/sync');
     toast.success(res.data.msg);
@@ -234,28 +277,26 @@ const syncGoogle = async () => {
   } catch (err) {
     if (err.response?.data?.needsAuth) {
       openedPopup = true;
-      const authRes = await API.get('/schedule/google/auth');
+      const authRes = await scheduleApi.getGoogleAuthUrl();
       const popup = window.open(authRes.data.url, '_blank', 'width=500,height=600');
-      
-      // Error 5: Handle blocked popup
+
       if (!popup) {
         toast.error('Popup blocked. Allow popups and try again.');
         setSyncing(false);
         return;
       }
-      
+
       toast('Complete Google login in the popup');
-      
-      // Timeout fallback if user closes popup
-      setTimeout(() => {
-        if (popup.closed) setSyncing(false);
+      googleAuthTimeout.current = window.setTimeout(() => {
+        setSyncing(false);
+        toast('Google login did not complete. Please try again.');
       }, 120000);
-      
     } else {
       toast.error(err.response?.data?.msg || 'Sync failed');
       setSyncing(false);
     }
   }
+
   if (!openedPopup) setSyncing(false);
 };
 
@@ -424,6 +465,7 @@ const syncGoogle = async () => {
                             onClick={() => handleMarkMissed(block._id)}
                             className="missed-btn-pro"
                             title="Mark as missed - will reschedule"
+                            disabled={scheduleLoading || syncing}
                           >
                             <AlertTriangle size={14} /> Missed
                           </button>
@@ -433,6 +475,7 @@ const syncGoogle = async () => {
                             onClick={() => setLoggingBlock(block)}
                             className="log-btn-pro"
                             title="Log actual time spent"
+                            disabled={scheduleLoading || syncing}
                           >
                             <Clock size={14} /> {block.actualDuration ? 'Update' : 'Log'}
                           </button>
