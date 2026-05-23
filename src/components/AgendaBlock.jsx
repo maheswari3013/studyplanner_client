@@ -21,7 +21,7 @@ export default function AgendaBlock({
 }) {
   const isBreak = block.isBreak || block.type === 'Break';
   const isCompleted = block.completed;
-  const isMissed = block.missed;
+  const isMissed = block.missed || block.status === 'missed';
   const isPending = !isCompleted && !isMissed;
   const isStudyOrReview = block.type === 'Study' || block.type === 'Review';
   const blockTypeClass = isBreak ? 'break-block' : 'study-block';
@@ -46,19 +46,32 @@ export default function AgendaBlock({
             <span><b>Duration:</b> {block.duration} min</span>
             <span><b>Time:</b> {block.time}</span>
           </p>
-          {block.status === 'missed' && block.originalStartTime && (
-            <div className="text-sm text-red-600 font-medium">
-              Missed: {dayjs(block.originalStartTime).format('HH:mm')}
+          {block.status === 'missed' && (
+            <div className="p-2 bg-red-50 border-l-4 border-red-500 rounded mb-2">
+              <div className="text-sm text-red-700 font-medium">
+                Missed: {dayjs(block.originalStartTime || block.startTime).format('HH:mm')}
+              </div>
+              <div className="text-xs text-red-600">Auto-rescheduled to next available slot</div>
+            </div>
+          )}
+          {block.status === 'makeup' && (
+            <div className="p-2 bg-blue-50 border-l-4 border-blue-500 rounded mb-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm text-blue-700 font-medium">{block.title}</span>
+                {block.isRescheduled && (
+                  <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Rescheduled</span>
+                )}
+              </div>
+              {block.originalStartTime && (
+                <div className="text-xs text-blue-600">
+                  Makeup for missed block at {dayjs(block.originalStartTime).format('HH:mm')}
+                </div>
+              )}
             </div>
           )}
           {block.status === 'overdue' && block.originalStartTime && (
             <div className="text-sm text-yellow-600 font-medium">
               Overdue: {dayjs(block.originalStartTime).format('HH:mm')}
-            </div>
-          )}
-          {block.status === 'makeup' && block.originalStartTime && (
-            <div className="text-sm text-blue-600 font-medium">
-              Makeup for: {dayjs(block.originalStartTime).format('HH:mm')}
             </div>
           )}
           {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
