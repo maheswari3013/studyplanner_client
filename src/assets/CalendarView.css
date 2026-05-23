@@ -398,7 +398,7 @@ html.dark .day-number-pro.today {
 }
 
 .block-pro.block-missed {
-  background: #f59e0b !important;
+  background: #dc2626 !important;
 }
 
 .block-pro.block-done {
@@ -564,7 +564,7 @@ html.dark .block-detail-pro {
 }
 
 .block-detail-pro.block-exam { border-left-color: #dc2626 !important; }
-.block-detail-pro.block-missed { border-left-color: #f59e0b !important; }
+.block-detail-pro.block-missed { border-left-color: #dc2626 !important; }
 .block-detail-pro.block-done { border-left-color: #10b981 !important; }
 .block-detail-pro.block-break { border-left-color: #6b7280 !important; }
 .block-detail-pro.block-review { border-left-color: #8b5cf6 !important; }
