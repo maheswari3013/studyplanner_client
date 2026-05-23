@@ -13,9 +13,21 @@ const defaultAvailableHours = {
 };
 
 function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: exam._id });
+  // Guard: don't call useSortable if no valid ID
+  const sortableId = exam?._id || `temp-${idx}`;
 
-  // Error 4: Add visual feedback during drag
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: sortableId });
+
+  // If exam data isn't ready, render nothing
+  if (!exam ||!exam._id) return null;
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -373,6 +385,8 @@ const sensors = useSensors(
 
   if (loading) return <div className="exams-container"><p>Loading...</p></div>;
 
+const validExams = exams.filter(e => e && e._id);
+
   return (
     <div className="exams-container">
       <Toaster position="top-right" />
@@ -567,20 +581,20 @@ const sensors = useSensors(
         <>
           <p className="drag-hint">Drag ⋮⋮ to reorder priority. Higher = studied first.</p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={exams.map(e => e._id)} strategy={verticalListSortingStrategy}>
-              <div className="exams-list">
-                {exams.map((exam, idx) => (
-                  <SortableExamCard
-                    key={exam._id}
-                    exam={exam}
-                    idx={idx}
-                    onDelete={handleDelete}
-                    onEdit={handleEdit}
-                    onUpdateConfidence={handleUpdateConfidence}
-                  />
-                ))}
-              </div>
-            </SortableContext>
+<SortableContext items={validExams.map(e => e._id)} strategy={verticalListSortingStrategy}>
+  <div className="exams-list">
+    {validExams.map((exam, idx) => (
+      <SortableExamCard
+        key={exam._id}
+        exam={exam}
+        idx={idx}
+        onDelete={handleDelete}
+        onEdit={handleEdit}
+        onUpdateConfidence={handleUpdateConfidence}
+      />
+    ))}
+  </div>
+</SortableContext>
           </DndContext>
         </>
       )}
