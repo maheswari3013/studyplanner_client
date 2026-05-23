@@ -224,28 +224,40 @@ export default function CalendarView() {
   };
 
   // FIXED: Proper error handling, no err reference in finally
-  const syncGoogle = async () => {
-    setSyncing(true);
-    let openedPopup = false;
-    try {
-      const res = await API.post('/schedule/google/sync');
-      toast.success(res.data.msg);
-      setGoogleConnected(true);
-      setSyncing(false);
-    } catch (err) {
-      if (err.response?.data?.needsAuth) {
-        openedPopup = true;
-        const authRes = await API.get('/schedule/google/auth');
-        window.open(authRes.data.url, '_blank', 'width=500,height=600');
-        toast('Complete Google login in the popup');
-        // Don't setSyncing(false) - postMessage will handle it
-      } else {
-        toast.error(err.response?.data?.msg || 'Sync failed');
+const syncGoogle = async () => {
+  setSyncing(true);
+  let openedPopup = false;
+  try {
+    const res = await API.post('/schedule/google/sync');
+    toast.success(res.data.msg);
+    setGoogleConnected(true);
+  } catch (err) {
+    if (err.response?.data?.needsAuth) {
+      openedPopup = true;
+      const authRes = await API.get('/schedule/google/auth');
+      const popup = window.open(authRes.data.url, '_blank', 'width=500,height=600');
+      
+      // Error 5: Handle blocked popup
+      if (!popup) {
+        toast.error('Popup blocked. Allow popups and try again.');
         setSyncing(false);
+        return;
       }
+      
+      toast('Complete Google login in the popup');
+      
+      // Timeout fallback if user closes popup
+      setTimeout(() => {
+        if (popup.closed) setSyncing(false);
+      }, 120000);
+      
+    } else {
+      toast.error(err.response?.data?.msg || 'Sync failed');
+      setSyncing(false);
     }
-    if (!openedPopup) setSyncing(false);
-  };
+  }
+  if (!openedPopup) setSyncing(false);
+};
 
   const getMonthDays = () => {
     const year = currentDate.getFullYear();

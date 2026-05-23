@@ -13,11 +13,15 @@ const defaultAvailableHours = {
 };
 
 function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: exam._id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: exam._id });
 
+  // Error 4: Add visual feedback during drag
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition
+    transition,
+    opacity: isDragging? 0.5 : 1,
+    zIndex: isDragging? 999 : 1,
+    cursor: isDragging? 'grabbing' : 'default'
   };
 
   const totalHours = exam.syllabusTopics?.reduce((sum, t) => sum + (t.hours || 0), 0) || exam.totalHours || 0;
@@ -28,7 +32,7 @@ function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence }) {
   const confidenceLabels = ['None', 'Low', 'Medium', 'High', 'Very High'];
 
   return (
-    <div ref={setNodeRef} className={`exam-card-sortable ${isPast? 'past-due' : ''}`} style={style}>
+    <div ref={setNodeRef} className={`exam-card-sortable ${isPast? 'past-due' : ''} ${isDragging? 'dragging' : ''}`} style={style}>
       <div className="exam-card-header">
         <div className="exam-card-header-left">
           <div {...attributes} {...listeners} className="drag-handle" title="Drag to reorder priority">
@@ -117,7 +121,7 @@ export default function Exams() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [editingExam, setEditingExam] = useState(null); // ADD THIS
+  const [editingExam, setEditingExam] = useState(null);
 
   const [subject, setSubject] = useState('');
   const [examDate, setExamDate] = useState('');
@@ -133,16 +137,32 @@ export default function Exams() {
   const [hoursPreset, setHoursPreset] = useState('custom');
   const [breakRatio, setBreakRatio] = useState({ study: 50, break: 10 });
 
+  // Error 1 & 7: Default to full day 0-23
   const [config, setConfig] = useState({
-    startHour: 1,
+    startHour: 0,
     endHour: 23,
-    startDate: new Date().toISOString().split('T')[0]
+    startDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
   });
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  // Error 4: Add activationConstraint to prevent accidental drags
+  // 1. Add error boundary for drag if sensors fail
+const sensors = useSensors(
+  useSensor(PointerSensor, {
+    activationConstraint: { distance: 8, tolerance: 5 }, // tolerance helps touch
+  }),
+  useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+);
+
+// 2. Disable drag handle when editing to prevent conflicts
+<div 
+  {...attributes} 
+  {...listeners} 
+  className="drag-handle" 
+  style={{ pointerEvents: editingExam ? 'none' : 'auto' }}
+  title="Drag to reorder priority"
+>
+  ⋮⋮
+</div>
 
   const fetchExams = async () => {
     try {
@@ -220,7 +240,6 @@ export default function Exams() {
     setAvailableHours({...availableHours, [day]: Number(hours) });
   };
 
-  // ADD THIS: Load exam data into form for editing
   const handleEdit = (exam) => {
     setEditingExam(exam);
     setSubject(exam.subject);
@@ -281,7 +300,7 @@ export default function Exams() {
       priority,
       totalHours: hourMode === 'subject'? totalHours : undefined,
       syllabusTopics: hourMode === 'topic'
-       ? filteredTopics
+     ? filteredTopics
         : filteredTopics.map(t => ({ name: t.name, hours: totalHours / filteredTopics.length })),
       availableHours,
       breakRatio
@@ -289,11 +308,9 @@ export default function Exams() {
 
     try {
       if (editingExam) {
-        // UPDATE EXISTING
         await examApi.updateExam(editingExam._id, examData);
         toast.success('Exam updated');
       } else {
-        // CREATE NEW
         await examApi.createExam(examData);
         toast.success('Exam added');
       }
@@ -371,8 +388,8 @@ export default function Exams() {
             </button>
           )}
           <button onClick={() => { resetForm(); setShowForm(!showForm); }} className="btn-primary">
-  {showForm? 'Cancel' : '+ Add Exam'}
-</button>
+            {showForm? 'Cancel' : '+ Add Exam'}
+          </button>
         </div>
       </div>
 

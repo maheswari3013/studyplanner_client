@@ -30,7 +30,7 @@ export const scheduleApi = {
   exportJSON: () => API.get('/schedule/export'),
   syncGoogle: () => API.post('/schedule/google/sync'),
   disconnectGoogle: () => API.delete('/schedule/google/disconnect'),
-  getGoogleAuthUrl: () => API.get('/schedule/google/auth'),
+  getGoogleAuthUrl: () => API.get('/schedule/google/auth'), // Backend callback is now /auth/google/callback
   
   // Stats & reports
   getStats: () => API.get('/schedule/stats'),
@@ -43,7 +43,11 @@ export const scheduleApi = {
   updateConfidence: (subject, level) => API.patch('/schedule/user/confidence', { subject, level }),
   
   // Clear all
-  clearAll: () => API.delete('/schedule/clear-all')
+  clearAll: () => API.delete('/schedule/clear-all'),
+
+  // Error 3 + Request 1: Admin endpoints
+  getAdminUsers: () => API.get('/schedule/admin/users'),
+  getAdminStats: () => API.get('/schedule/admin/stats')
 };
 
 export default scheduleApi;
