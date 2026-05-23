@@ -6,7 +6,14 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    try {
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   const persistUser = useCallback((userData) => {
@@ -70,9 +77,17 @@ export const AuthProvider = ({ children }) => {
       if (event.origin !== googleAuthOrigin) return;
 
       if (event.data?.type === 'google-login-success') {
-        localStorage.setItem('token', event.data.token);
-        setToken(event.data.token);
-        window.location.href = '/dashboard';
+        const cleanToken = event.data.token.trim();
+        localStorage.setItem('token', cleanToken);
+        setToken(cleanToken);
+        try {
+          const userData = await fetchUser();
+          console.log('Successfully fetched user after Google login:', userData);
+          window.location.href = '/agenda';
+        } catch (err) {
+          console.error('Failed to fetch user after Google login:', err);
+          window.location.href = '/auth';
+        }
       }
 
       if (event.data?.type === 'google-calendar-success') {

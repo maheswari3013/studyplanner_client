@@ -1,21 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { validatePassword, getPasswordError } from '../utils/validatePassword';
 import { BarChart3, BrainCircuit, CalendarDays, KeyRound, LockKeyhole, Mail, Moon, Palette, Sun, UserRound } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const VAPID_PUBLIC_KEY = 'BOHFuuYR-Esh5cxDIUQKh_Vqmvx5xMo70osWEiEZKmbJGQvKegSio0oGQMUbZuAypHhkp6JcZ5HlBu0A2sShFgs';
-
-const getInitialTheme = () => {
-  if (typeof window === 'undefined') return 'light';
-
-  const savedTheme = window.localStorage.getItem('auth-theme');
-  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
-
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
 
 const Auth = () => {
   const [mode, setMode] = useState('login'); // 'login' | 'register' | 'verify' | 'forgot' | 'reset'
@@ -23,50 +15,12 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [theme, setTheme] = useState(getInitialTheme);
+  const { theme, toggleTheme } = useTheme();
   const { setAuthData, fetchUser } = useAuth();
   const navigate = useNavigate();
 
   const { username, email, password, confirmPassword, otp } = formData;
   const isDark = theme === 'dark';
-
-  useEffect(() => {
-    window.localStorage.setItem('auth-theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    const getApiOrigin = () => {
-      const url = import.meta.env.VITE_API_URL || 'https://studyplanner-api-awmh.onrender.com/api';
-      try {
-        return new URL(url).origin;
-      } catch {
-        return 'https://studyplanner-api-awmh.onrender.com';
-      }
-    };
-    const apiOrigin = getApiOrigin();
-
-    const handler = async (event) => {
-      if (event.origin !== apiOrigin) return;
-
-      if (event.data?.type === 'google-login-success') {
-        localStorage.setItem('token', event.data.token);
-        if (event.data.user) {
-          setAuthData(event.data.token, event.data.user);
-        } else {
-          await fetchUser?.();
-        }
-        window.location.href = '/dashboard';
-      }
-
-      if (event.data?.type === 'google-calendar-success') {
-        toast.success('Google Calendar connected');
-        await fetchUser?.();
-      }
-    };
-
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [fetchUser, navigate, setAuthData]);
 
   const handleGoogleLogin = () => {
     const getApiOrigin = () => {
@@ -100,9 +54,9 @@ const Auth = () => {
 
   const subscribeUser = async (token) => {
     try {
-      if (!('serviceWorker' in navigator) ||!('PushManager' in window)) return;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
       const permission = await Notification.requestPermission();
-      if (permission!== 'granted') return;
+      if (permission !== 'granted') return;
 
       const sw = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
@@ -123,7 +77,7 @@ const Auth = () => {
     e.preventDefault();
     setError('');
 
-    if (password!== confirmPassword) {
+    if (password !== confirmPassword) {
       setError('Passwords do not match');
       toast.error('Passwords do not match');
       return;
@@ -180,7 +134,7 @@ const Auth = () => {
       const res = await API.post('/auth/verify-register', { email, otp });
       const { token, user } = res.data;
 
-      if (!token ||!user) throw new Error('Invalid response');
+      if (!token || !user) throw new Error('Invalid response');
 
       setAuthData(token, user);
       toast.success('Registration successful');
@@ -202,7 +156,7 @@ const Auth = () => {
       const res = await API.post('/auth/login', { email, password });
       const { token, user } = res.data;
 
-      if (!token ||!user) throw new Error('Invalid response from server');
+      if (!token || !user) throw new Error('Invalid response from server');
 
       setAuthData(token, user);
       subscribeUser(token).catch(() => {});
@@ -260,7 +214,7 @@ const Auth = () => {
     e.preventDefault();
     setError('');
 
-    if (password!== confirmPassword) {
+    if (password !== confirmPassword) {
       setError('Passwords do not match');
       toast.error('Passwords do not match');
       return;
@@ -379,7 +333,7 @@ const Auth = () => {
 
       <button
         type="button"
-        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        onClick={toggleTheme}
         aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
         className={`absolute right-4 top-4 z-20 flex h-10 w-18 items-center justify-between rounded-full border px-2 transition duration-500 sm:right-6 sm:top-6 ${themeClasses.toggleTrack}`}
       >
@@ -411,135 +365,135 @@ const Auth = () => {
           )}
 
           <form onSubmit={getSubmitHandler()} className="space-y-4">
-        {mode === 'register' && (
-          <label className="relative block">
-            <span className="sr-only">Username</span>
-            <input className={`peer ${inputWithIconClass}`} type="text" name="username" placeholder="Username" value={username} onChange={onChange} required />
-            <UserRound className={iconClass} size={16} />
-          </label>
-        )}
+            {mode === 'register' && (
+              <label className="relative block">
+                <span className="sr-only">Username</span>
+                <input className={`peer ${inputWithIconClass}`} type="text" name="username" placeholder="Username" value={username} onChange={onChange} required />
+                <UserRound className={iconClass} size={16} />
+              </label>
+            )}
 
-        {(mode === 'login' || mode === 'register' || mode === 'forgot' || mode === 'reset') && (
-          <label className="relative block">
-            <span className="sr-only">Email</span>
-            <input
-              className={`peer ${inputWithIconClass}`}
-              type="email" name="email" placeholder="Email address" value={email} onChange={onChange}
-              required disabled={mode === 'verify' || mode === 'reset'}
-            />
-            <Mail className={iconClass} size={16} />
-          </label>
-        )}
+            {(mode === 'login' || mode === 'register' || mode === 'forgot' || mode === 'reset') && (
+              <label className="relative block">
+                <span className="sr-only">Email</span>
+                <input
+                  className={`peer ${inputWithIconClass}`}
+                  type="email" name="email" placeholder="Email address" value={email} onChange={onChange}
+                  required disabled={mode === 'verify' || mode === 'reset'}
+                />
+                <Mail className={iconClass} size={16} />
+              </label>
+            )}
 
-        {(mode === 'login' || mode === 'register' || mode === 'reset') && (
-          <label className="relative block">
-            <span className="sr-only">{mode === 'reset'? 'New Password' : 'Password'}</span>
-            <input
-              className={`peer ${inputWithIconClass}`}
-              type="password" name="password"
-              placeholder={mode === 'reset'? 'New password' : 'Password'}
-              value={password} onChange={onChange} required
-            />
-            <LockKeyhole className={iconClass} size={16} />
-          </label>
-        )}
+            {(mode === 'login' || mode === 'register' || mode === 'reset') && (
+              <label className="relative block">
+                <span className="sr-only">{mode === 'reset' ? 'New Password' : 'Password'}</span>
+                <input
+                  className={`peer ${inputWithIconClass}`}
+                  type="password" name="password"
+                  placeholder={mode === 'reset' ? 'New password' : 'Password'}
+                  value={password} onChange={onChange} required
+                />
+                <LockKeyhole className={iconClass} size={16} />
+              </label>
+            )}
 
-        {(mode === 'register' || mode === 'reset') && (
-          <label className="relative block">
-            <span className="sr-only">Confirm Password</span>
-            <input
-              className={`peer ${inputWithIconClass}`}
-              type="password" name="confirmPassword" placeholder="Confirm password"
-              value={confirmPassword} onChange={onChange} required
-            />
-            <LockKeyhole className={iconClass} size={16} />
-          </label>
-        )}
+            {(mode === 'register' || mode === 'reset') && (
+              <label className="relative block">
+                <span className="sr-only">Confirm Password</span>
+                <input
+                  className={`peer ${inputWithIconClass}`}
+                  type="password" name="confirmPassword" placeholder="Confirm password"
+                  value={confirmPassword} onChange={onChange} required
+                />
+                <LockKeyhole className={iconClass} size={16} />
+              </label>
+            )}
 
- {(mode === 'verify' || mode === 'reset') && (
-  <>
-    <label className="relative block">
-      <span className="sr-only">6-digit OTP</span>
-      <input
-        className={`peer ${inputWithIconClass}`}
-        type="text" 
-        name="otp" 
-        placeholder="6-digit OTP"
-        value={otp} 
-        onChange={onChange} 
-        maxLength="6" 
-        required
-      />
-      <KeyRound className={iconClass} size={16} />
-    </label>
-    <button 
-      type="button" 
-      onClick={mode === 'verify'? handleResendRegisterOtp : handleResendResetOtp}
-      disabled={resendLoading}
-      className={`w-full rounded-xl border px-4 py-3 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 ${themeClasses.resend}`}
-    >
-      {resendLoading? 'Sending...' : 'Resend OTP'}
-    </button>
-  </>
-)}
+            {(mode === 'verify' || mode === 'reset') && (
+              <>
+                <label className="relative block">
+                  <span className="sr-only">6-digit OTP</span>
+                  <input
+                    className={`peer ${inputWithIconClass}`}
+                    type="text" 
+                    name="otp" 
+                    placeholder="6-digit OTP"
+                    value={otp} 
+                    onChange={onChange} 
+                    maxLength="6" 
+                    required
+                  />
+                  <KeyRound className={iconClass} size={16} />
+                </label>
+                <button 
+                  type="button" 
+                  onClick={mode === 'verify' ? handleResendRegisterOtp : handleResendResetOtp}
+                  disabled={resendLoading}
+                  className={`w-full rounded-xl border px-4 py-3 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 ${themeClasses.resend}`}
+                >
+                  {resendLoading ? 'Sending...' : 'Resend OTP'}
+                </button>
+              </>
+            )}
 
-        <button
-          type="submit"
-          disabled={submitLoading}
-          className={`mt-2 w-full rounded-xl px-5 py-4 text-[15px] font-semibold transition duration-300 hover:-translate-y-0.5 hover:scale-[1.01] focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:scale-100 ${themeClasses.submit}`}
-        >
-          {submitLoading? 'Processing...' :
-            mode === 'login'? 'Sign in' :
-            mode === 'register'? 'Send OTP' :
-            mode === 'verify'? 'Verify & Register' :
-            mode === 'forgot'? 'Send Reset OTP' :
-            'Reset Password'
-          }
-        </button>
-      </form>
-
-      {mode === 'login' && (
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className={`mt-3 flex w-full items-center justify-center gap-3 rounded-xl border px-5 py-4 text-[15px] font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
-        >
-          <img src="/google-icon.svg" alt="" className="h-5 w-5" />
-          Sign in with Google
-        </button>
-      )}
-
-      <div className="mt-5 flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
-        {mode === 'login' && (
-          <>
-            <button type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`} onClick={() => setMode('forgot')}>
-              Forgot Password?
-            </button>
             <button
-              type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.accentButton}`}
-              onClick={() => { setMode('register'); setError(''); }}
+              type="submit"
+              disabled={submitLoading}
+              className={`mt-2 w-full rounded-xl px-5 py-4 text-[15px] font-semibold transition duration-300 hover:-translate-y-0.5 hover:scale-[1.01] focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:scale-100 ${themeClasses.submit}`}
             >
-              Get started free
+              {submitLoading ? 'Processing...' :
+                mode === 'login' ? 'Sign in' :
+                mode === 'register' ? 'Send OTP' :
+                mode === 'verify' ? 'Verify & Register' :
+                mode === 'forgot' ? 'Send Reset OTP' :
+                'Reset Password'
+              }
             </button>
-          </>
-        )}
-        {mode === 'register' && (
-          <button
-            type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
-            onClick={() => { setMode('login'); setError(''); }}
-          >
-            Sign in
-          </button>
-        )}
-        {(mode === 'verify' || mode === 'forgot' || mode === 'reset') && (
-          <button
-            type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
-            onClick={() => { setMode('login'); setError(''); setFormData({...formData, otp: '' }); }}
-          >
-            Sign in
-          </button>
-        )}
-      </div>
+          </form>
+
+          {mode === 'login' && (
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className={`mt-3 flex w-full items-center justify-center gap-3 rounded-xl border px-5 py-4 text-[15px] font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
+            >
+              <img src="/google-icon.svg" alt="" className="h-5 w-5" />
+              Sign in with Google
+            </button>
+          )}
+
+          <div className="mt-5 flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
+            {mode === 'login' && (
+              <>
+                <button type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`} onClick={() => setMode('forgot')}>
+                  Forgot Password?
+                </button>
+                <button
+                  type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.accentButton}`}
+                  onClick={() => { setMode('register'); setError(''); }}
+                >
+                  Get started free
+                </button>
+              </>
+            )}
+            {mode === 'register' && (
+              <button
+                type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
+                onClick={() => { setMode('login'); setError(''); }}
+              >
+                Sign in
+              </button>
+            )}
+            {(mode === 'verify' || mode === 'forgot' || mode === 'reset') && (
+              <button
+                type="button" className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
+                onClick={() => { setMode('login'); setError(''); setFormData({...formData, otp: '' }); }}
+              >
+                Sign in
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mx-auto mt-10 grid w-full max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -423,36 +423,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="password-card">
-        <h3>Google Calendar</h3>
 
-        <div className="profile-actions">
-          {isGoogleConnected ? (
-            <>
-              <button
-                onClick={handleSyncCalendar}
-                className="btn-primary"
-              >
-                Sync to Google Calendar
-              </button>
-
-              <button
-                onClick={handleDisconnectGoogle}
-                className="btn-secondary"
-              >
-                Disconnect
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={handleConnectGoogle}
-              className="btn-primary"
-            >
-              Connect Google Calendar
-            </button>
-          )}
-        </div>
-      </div>
 
       <div className="password-card">
         <h3>Security</h3>
