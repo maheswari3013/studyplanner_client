@@ -35,27 +35,32 @@ const Auth = () => {
   }, [theme]);
 
   useEffect(() => {
-    const handler = async (e) => {
-      if (e.origin !== 'https://studyplanner-api-awmh.onrender.com') return;
+    const handler = async (event) => {
+      if (event.origin !== 'https://studyplanner-api-awmh.onrender.com') return;
 
-      if (e.data?.type === 'google-login-success') {
-        localStorage.setItem('token', e.data.token);
-        if (e.data.user) {
-          setAuthData(e.data.token, e.data.user);
+      if (event.data?.type === 'google-login-success') {
+        localStorage.setItem('token', event.data.token);
+        if (event.data.user) {
+          setAuthData(event.data.token, event.data.user);
         } else {
           await fetchUser?.();
         }
-        navigate('/dashboard');
+        window.location.href = '/dashboard';
       }
 
-      if (e.data?.type === 'google-calendar-success') {
-        toast.success('Calendar connected');
+      if (event.data?.type === 'google-calendar-success') {
+        toast.success('Google Calendar connected');
+        await fetchUser?.();
       }
     };
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, [fetchUser, navigate, setAuthData]);
+
+  const handleGoogleLogin = () => {
+    window.open('https://studyplanner-api-awmh.onrender.com/api/auth/google/login', '_blank', 'width=500,height=600');
+  };
 
   const onChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value });
@@ -476,7 +481,7 @@ const Auth = () => {
       {mode === 'login' && (
         <button
           type="button"
-          onClick={() => window.open('https://studyplanner-api-awmh.onrender.com/api/auth/google/login', 'popup', 'width=500,height=600')}
+          onClick={handleGoogleLogin}
           className={`mt-3 flex w-full items-center justify-center gap-3 rounded-xl border px-5 py-4 text-[15px] font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
         >
           <img src="/google-icon.svg" alt="" className="h-5 w-5" />

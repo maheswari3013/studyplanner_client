@@ -1,33 +1,10 @@
+import dayjs from 'dayjs';
 import { AlertTriangle, BookOpen, Check, ClockIcon, Coffee, Edit2, FileWarning, Maximize2, Play, X } from 'lucide-react';
 
 const statusColors = {
   completed: 'bg-green-500/20 border-green-500',
   missed: 'bg-red-500/20 border-red-500',
   overdue: 'bg-yellow-500/20 border-yellow-500'
-};
-
-const formatMissedTime = (rescheduledFrom) => {
-  if (!rescheduledFrom) return '';
-
-  const rawTime = typeof rescheduledFrom === 'string'
-    ? rescheduledFrom
-    : rescheduledFrom.time || rescheduledFrom.startTime || rescheduledFrom.date;
-
-  if (!rawTime) return '';
-
-  if (/^\d{2}:\d{2}/.test(rawTime)) {
-    const [hours, minutes] = rawTime.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  }
-
-  const parsed = new Date(rawTime);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  }
-
-  return rawTime;
 };
 
 export default function AgendaBlock({
@@ -55,7 +32,6 @@ export default function AgendaBlock({
       : overdue
         ? statusColors.overdue
         : '';
-  const missedTime = formatMissedTime(block.rescheduledFrom);
   const Icon = block.isExam ? FileWarning : isBreak ? Coffee : BookOpen;
 
   return (
@@ -70,10 +46,20 @@ export default function AgendaBlock({
             <span><b>Duration:</b> {block.duration} min</span>
             <span><b>Time:</b> {block.time}</span>
           </p>
-          {block.rescheduledFrom && (
-            <p className="rescheduled-from text-red-600">
-              Missed: {missedTime}
-            </p>
+          {block.status === 'missed' && block.originalStartTime && (
+            <div className="text-sm text-red-600 font-medium">
+              Missed: {dayjs(block.originalStartTime).format('HH:mm')}
+            </div>
+          )}
+          {block.status === 'overdue' && block.originalStartTime && (
+            <div className="text-sm text-yellow-600 font-medium">
+              Overdue: {dayjs(block.originalStartTime).format('HH:mm')}
+            </div>
+          )}
+          {block.status === 'makeup' && block.originalStartTime && (
+            <div className="text-sm text-blue-600 font-medium">
+              Makeup for: {dayjs(block.originalStartTime).format('HH:mm')}
+            </div>
           )}
           {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
           {overdue && !isMissed && <span className="overdue-badge"><AlertTriangle size={14} /> Overdue</span>}
