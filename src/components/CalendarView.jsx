@@ -291,8 +291,9 @@ export default function CalendarView() {
       if (err.response?.data?.action === 'CONNECT_CALENDAR' || err.response?.data?.needsAuth) {
         toast('Connect Google Calendar first');
         const clientOrigin = window.location.origin;
+        const token = localStorage.getItem('token');
         const popup = window.open(
-          `${GOOGLE_AUTH_ORIGIN}/api/auth/google/calendar?origin=${encodeURIComponent(clientOrigin)}`,
+          `${GOOGLE_AUTH_ORIGIN}/api/auth/google/calendar?origin=${encodeURIComponent(clientOrigin)}&token=${token}`,
           'gcal-connect',
           'width=500,height=600'
         );
