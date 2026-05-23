@@ -12,21 +12,15 @@ const defaultAvailableHours = {
   mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 6, sun: 6
 };
 
-function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence }) {
-  // Guard: don't call useSortable if no valid ID
-  const sortableId = exam?._id || `temp-${idx}`;
+function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence, editingExam }) {
+  const sortable = useSortable({
+    id: exam?._id || `fallback-${idx}`,
+    disabled:!exam?._id ||!!editingExam // Error 4: Disable drag when editing
+  });
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: sortableId });
+  if (!exam?._id ||!sortable) return null;
 
-  // If exam data isn't ready, render nothing
-  if (!exam ||!exam._id) return null;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -47,7 +41,13 @@ function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence }) {
     <div ref={setNodeRef} className={`exam-card-sortable ${isPast? 'past-due' : ''} ${isDragging? 'dragging' : ''}`} style={style}>
       <div className="exam-card-header">
         <div className="exam-card-header-left">
-          <div {...attributes} {...listeners} className="drag-handle" title="Drag to reorder priority">
+          <div
+            {...(attributes || {})}
+            {...(listeners || {})}
+            className="drag-handle"
+            title="Drag to reorder priority"
+            style={{ pointerEvents: editingExam? 'none' : 'auto' }} // Error 4: Disable during edit
+          >
             ⋮⋮
           </div>
           <div>
@@ -149,32 +149,18 @@ export default function Exams() {
   const [hoursPreset, setHoursPreset] = useState('custom');
   const [breakRatio, setBreakRatio] = useState({ study: 50, break: 10 });
 
-  // Error 1 & 7: Default to full day 0-23
   const [config, setConfig] = useState({
     startHour: 0,
     endHour: 23,
     startDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
   });
 
-  // Error 4: Add activationConstraint to prevent accidental drags
-  // 1. Add error boundary for drag if sensors fail
-const sensors = useSensors(
-  useSensor(PointerSensor, {
-    activationConstraint: { distance: 8, tolerance: 5 }, // tolerance helps touch
-  }),
-  useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-);
-
-// 2. Disable drag handle when editing to prevent conflicts
-<div 
-  {...attributes} 
-  {...listeners} 
-  className="drag-handle" 
-  style={{ pointerEvents: editingExam ? 'none' : 'auto' }}
-  title="Drag to reorder priority"
->
-  ⋮⋮
-</div>
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const fetchExams = async () => {
     try {
@@ -312,7 +298,7 @@ const sensors = useSensors(
       priority,
       totalHours: hourMode === 'subject'? totalHours : undefined,
       syllabusTopics: hourMode === 'topic'
-     ? filteredTopics
+    ? filteredTopics
         : filteredTopics.map(t => ({ name: t.name, hours: totalHours / filteredTopics.length })),
       availableHours,
       breakRatio
@@ -385,7 +371,7 @@ const sensors = useSensors(
 
   if (loading) return <div className="exams-container"><p>Loading...</p></div>;
 
-const validExams = exams.filter(e => e && e._id);
+  const validExams = exams.filter(e => e && e._id && typeof e._id === 'string');
 
   return (
     <div className="exams-container">
@@ -396,7 +382,7 @@ const validExams = exams.filter(e => e && e._id);
           <button onClick={() => navigate('/calendar')} className="btn-secondary">
             View Calendar
           </button>
-          {exams.length > 0 && (
+          {validExams.length > 0 && (
             <button onClick={handleGenerateAll} disabled={generating} className="btn-generate">
               {generating? 'Generating...' : 'Generate Plan'}
             </button>
@@ -554,7 +540,7 @@ const validExams = exams.filter(e => e && e._id);
         </form>
       )}
 
-      {exams.length > 0 && (
+      {validExams.length > 0 && (
         <div className="config-section">
           <h4>Global Schedule Settings</h4>
           <div className="form-row">
@@ -572,7 +558,7 @@ const validExams = exams.filter(e => e && e._id);
         </div>
       )}
 
-      {exams.length === 0 &&!showForm? (
+      {validExams.length === 0 &&!showForm? (
         <div className="empty-state">
           <p>No exams yet. Add your first exam with topics and hours.</p>
           <button onClick={() => setShowForm(true)} className="btn-primary">+ Add Exam</button>
@@ -581,20 +567,21 @@ const validExams = exams.filter(e => e && e._id);
         <>
           <p className="drag-hint">Drag ⋮⋮ to reorder priority. Higher = studied first.</p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-<SortableContext items={validExams.map(e => e._id)} strategy={verticalListSortingStrategy}>
-  <div className="exams-list">
-    {validExams.map((exam, idx) => (
-      <SortableExamCard
-        key={exam._id}
-        exam={exam}
-        idx={idx}
-        onDelete={handleDelete}
-        onEdit={handleEdit}
-        onUpdateConfidence={handleUpdateConfidence}
-      />
-    ))}
-  </div>
-</SortableContext>
+            <SortableContext items={validExams.map(e => e._id)} strategy={verticalListSortingStrategy}>
+              <div className="exams-list">
+                {validExams.map((exam, idx) => (
+                  <SortableExamCard
+                    key={exam._id}
+                    exam={exam}
+                    idx={idx}
+                    onDelete={handleDelete}
+                    onEdit={handleEdit}
+                    onUpdateConfidence={handleUpdateConfidence}
+                    editingExam={editingExam}
+                  />
+                ))}
+              </div>
+            </SortableContext>
           </DndContext>
         </>
       )}
