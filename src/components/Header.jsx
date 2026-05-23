@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Calendar, BookOpen, User, LogOut, ListTodo, Zap, Shield } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 import '../assets/Header.css';
 
 export default function Header() {
@@ -13,7 +14,7 @@ export default function Header() {
     logout();
     navigate('/auth');
   };
-  console.log('User in Header:', user);
+
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#6366f1' },
     { path: '/agenda', label: 'Today\'s Agenda', icon: ListTodo, color: '#8b5cf6' },
@@ -57,6 +58,7 @@ export default function Header() {
     <span className="nav-username">{user?.username || user?.name}</span>
     <span className="nav-role">{user?.role === 'admin' ? 'Admin' : 'Student'}</span>
   </div>
+  <ThemeToggle />
   <button onClick={handleLogout} className="btn-logout-pro" title="Logout">
     <LogOut size={18} />
   </button>

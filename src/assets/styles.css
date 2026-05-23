@@ -259,3 +259,68 @@
     font-size: 24px;
   }
 }
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f6f7f8;
+}
+
+html.dark body {
+  background: #0F1115;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: calc(100vh - 76px);
+  padding: 0;
+  background:
+    linear-gradient(135deg, rgba(110, 138, 115, 0.08), transparent 34%),
+    linear-gradient(225deg, rgba(99, 102, 241, 0.08), transparent 42%),
+    #f6f7f8;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+html.dark .app-shell {
+  background:
+    linear-gradient(135deg, rgba(110, 138, 115, 0.12), transparent 34%),
+    linear-gradient(225deg, rgba(99, 102, 241, 0.1), transparent 42%),
+    #0F1115;
+}
+
+.dashboard-layout-shell {
+  min-height: calc(100vh - 76px);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-layout-content {
+  position: relative;
+  z-index: 1;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  box-shadow: 0 24px 70px rgba(28, 25, 23, 0.08);
+  backdrop-filter: blur(24px);
+}
+
+html.dark .glass-card {
+  background: rgba(26, 31, 39, 0.78);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+}

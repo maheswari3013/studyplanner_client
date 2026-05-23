@@ -105,7 +105,7 @@ function App() {
     <>
       <Header />
 
-      <main style={{ padding: '20px' }}>
+      <main className="app-shell">
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/auth" element={user? <Navigate to="/exams" /> : <Auth />} />

@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ColorProvider } from './context/ColorConstraints.jsx'
 import { ScheduleProvider } from './context/ScheduleContext.jsx'
+import { ThemeProvider } from './context/ThemeContext.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import './assets/variables.css'
@@ -26,15 +27,17 @@ if ('serviceWorker' in navigator) {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ColorProvider>
-        <AuthProvider>
-          <ScheduleProvider>
-            <ErrorBoundary>
-                <App />
-            </ErrorBoundary>
-          </ScheduleProvider>
-        </AuthProvider>
-      </ColorProvider>
+      <ThemeProvider>
+        <ColorProvider>
+          <AuthProvider>
+            <ScheduleProvider>
+              <ErrorBoundary>
+                  <App />
+              </ErrorBoundary>
+            </ScheduleProvider>
+          </AuthProvider>
+        </ColorProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

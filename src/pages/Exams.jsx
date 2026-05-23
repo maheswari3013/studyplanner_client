@@ -7,6 +7,9 @@ import { examApi } from '../api/examApi';
 import { scheduleApi } from '../api/scheduleApi';
 import toast, { Toaster } from 'react-hot-toast';
 import { CalendarDays, GripVertical, MapPin, X } from 'lucide-react';
+import DashboardLayout from '../components/DashboardLayout';
+import GlassCard from '../components/GlassCard';
+import StyledButton from '../components/StyledButton';
 import '../assets/exams.css';
 
 const defaultAvailableHours = {
@@ -373,22 +376,23 @@ export default function Exams() {
   const validExams = exams.filter(e => e && e._id && typeof e._id === 'string');
 
   return (
+    <DashboardLayout>
     <div className="exams-container">
       <Toaster position="top-right" />
       <div className="exams-header">
         <h2>Your Exams & Study Plan</h2>
         <div className="header-actions">
-          <button onClick={() => navigate('/calendar')} className="btn-secondary">
+          <StyledButton onClick={() => navigate('/calendar')}>
             View Calendar
-          </button>
+          </StyledButton>
           {validExams.length > 0 && (
-            <button onClick={handleGenerateAll} disabled={generating} className="btn-generate">
+            <StyledButton variant="generate" onClick={handleGenerateAll} disabled={generating}>
               {generating? 'Generating...' : 'Generate Plan'}
-            </button>
+            </StyledButton>
           )}
-          <button onClick={() => { resetForm(); setShowForm(!showForm); }} className="btn-primary">
+          <StyledButton variant="primary" onClick={() => { resetForm(); setShowForm(!showForm); }}>
             {showForm? 'Cancel' : '+ Add Exam'}
-          </button>
+          </StyledButton>
         </div>
       </div>
 
@@ -540,7 +544,7 @@ export default function Exams() {
       )}
 
       {validExams.length > 0 && (
-        <div className="config-section">
+        <GlassCard className="config-section">
           <h4>Global Schedule Settings</h4>
           <div className="form-row">
             <label>Day starts at:
@@ -554,7 +558,7 @@ export default function Exams() {
             </label>
           </div>
           <small>For full day use 0 to 23. For overnight use like 22 to 6.</small>
-        </div>
+        </GlassCard>
       )}
 
       {validExams.length === 0 &&!showForm? (
@@ -585,6 +589,7 @@ export default function Exams() {
         </>
       )}
     </div>
+    </DashboardLayout>
   );
 }
 

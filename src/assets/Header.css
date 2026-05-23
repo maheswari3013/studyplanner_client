@@ -219,3 +219,203 @@
   .nav-links { gap: 2px; }
   .nav-user { padding: 6px; }
 }
+
+/* Premium app shell navbar */
+.navbar-pro {
+  background: rgba(255, 255, 255, 0.74);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(22px);
+  box-shadow: 0 18px 42px rgba(28, 25, 23, 0.08);
+}
+
+html.dark .navbar-pro {
+  background: rgba(15, 17, 21, 0.78);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
+}
+
+.nav-container {
+  gap: 24px;
+}
+
+.logo-icon,
+.avatar {
+  background: linear-gradient(135deg, #6E8A73, #78977e);
+  box-shadow: 0 12px 24px rgba(110, 138, 115, 0.2);
+}
+
+.logo-text {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+  background: linear-gradient(135deg, #111827, #556B58 58%, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+html.dark .logo-text {
+  background: linear-gradient(135deg, #F5F5F2, #6E8A73 58%, #a5b4fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-link-pro {
+  color: rgba(68, 64, 60, 0.7);
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+html.dark .nav-link-pro {
+  color: rgba(245, 245, 242, 0.58);
+}
+
+.nav-link-pro:hover {
+  background: rgba(85, 107, 88, 0.08);
+  color: #556B58;
+  border-color: rgba(85, 107, 88, 0.16);
+}
+
+html.dark .nav-link-pro:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #F5F5F2;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.nav-link-pro.active {
+  background: rgba(110, 138, 115, 0.16);
+  color: #3f5644;
+  border-color: rgba(110, 138, 115, 0.25);
+  box-shadow: none;
+}
+
+html.dark .nav-link-pro.active {
+  background: rgba(110, 138, 115, 0.18);
+  color: #F5F5F2;
+  border-color: rgba(110, 138, 115, 0.3);
+}
+
+.nav-link-pro.active::after {
+  display: none;
+}
+
+.nav-user {
+  background: rgba(255, 255, 255, 0.66);
+  border-color: rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  box-shadow: 0 14px 34px rgba(28, 25, 23, 0.08);
+}
+
+html.dark .nav-user {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.nav-username {
+  color: #1c1917;
+}
+
+html.dark .nav-username {
+  color: #F5F5F2;
+}
+
+.nav-role {
+  background: rgba(85, 107, 88, 0.08);
+  color: #556B58;
+}
+
+html.dark .nav-role {
+  background: rgba(110, 138, 115, 0.12);
+  color: #8FA996;
+}
+
+.theme-toggle-pro {
+  position: relative;
+  display: flex;
+  width: 66px;
+  height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0 8px;
+  cursor: pointer;
+  transition: all 0.35s ease;
+}
+
+html.dark .theme-toggle-pro {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.theme-toggle-icon {
+  transition: color 0.25s ease;
+  z-index: 1;
+}
+
+.theme-toggle-icon.sun {
+  color: #fff;
+}
+
+.theme-toggle-icon.moon {
+  color: rgba(68, 64, 60, 0.46);
+}
+
+html.dark .theme-toggle-icon.sun {
+  color: rgba(245, 245, 242, 0.36);
+}
+
+html.dark .theme-toggle-icon.moon {
+  color: #F5F5F2;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #556B58;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(85, 107, 88, 0.26);
+  transition: transform 0.35s ease, background 0.35s ease;
+}
+
+html.dark .theme-toggle-thumb {
+  transform: translateX(30px);
+  background: #1A1F27;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+@media (max-width: 640px) {
+  .theme-toggle-pro {
+    width: 58px;
+  }
+
+  .theme-toggle-thumb {
+    transform: scale(0.92);
+  }
+
+  html.dark .theme-toggle-thumb {
+    transform: translateX(22px) scale(0.92);
+  }
+}

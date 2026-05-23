@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, BookOpen, Clock, TrendingUp, AlertCircle, CheckCircle2,
+  BookOpen, Clock, TrendingUp, CheckCircle2,
   Target, Zap, Smile, BarChart3, Heart
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
