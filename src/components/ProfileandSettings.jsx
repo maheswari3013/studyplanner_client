@@ -131,16 +131,34 @@ export default function Profile() {
     }
   };
 
-  // ADD THIS: Sync to Google Calendar
   const handleSyncCalendar = async () => {
     try {
-      const res = await API.post('/schedule/google/sync');
-      toast.success(res.data.msg);
+      const res = await API.get('/schedule/google/sync');
+      if (res.data.success) {
+        toast.success(`Synced ${res.data.synced} blocks to Google Calendar`);
+      }
     } catch (err) {
-      if (err.response?.data?.needsAuth) {
-        toast.error('Connect Google Calendar first');
+      if (err.response?.data?.action === 'CONNECT_CALENDAR' || err.response?.data?.needsAuth) {
+        toast('Connect Google Calendar first');
+        const popup = window.open(
+          `${GOOGLE_AUTH_ORIGIN}/api/auth/google/calendar`,
+          'gcal-connect',
+          'width=500,height=600'
+        );
+
+        const handler = (event) => {
+          if (event.origin !== GOOGLE_AUTH_ORIGIN) return;
+          if (event.data?.type === 'google-calendar-success') {
+            window.removeEventListener('message', handler);
+            popup?.close();
+            toast.success('Calendar connected. Retrying sync...');
+            setGoogleConnectionOverride(true);
+            handleSyncCalendar();
+          }
+        };
+        window.addEventListener('message', handler);
       } else {
-        toast.error('Sync failed');
+        toast.error(err.response?.data?.message || err.response?.data?.msg || 'Sync failed');
       }
     }
   };

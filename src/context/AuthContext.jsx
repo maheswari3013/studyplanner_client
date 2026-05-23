@@ -55,6 +55,25 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, [fetchUser]);
 
+  useEffect(() => {
+    const handler = async (event) => {
+      if (event.origin !== 'https://studyplanner-api-awmh.onrender.com') return;
+
+      if (event.data?.type === 'google-login-success') {
+        localStorage.setItem('token', event.data.token);
+        setToken(event.data.token);
+        window.location.href = '/dashboard';
+      }
+
+      if (event.data?.type === 'google-calendar-success') {
+        await fetchUser();
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [fetchUser]);
+
   const setAuthData = (token, userData) => {
   const cleanToken = token.trim(); // ADD THIS LINE
   localStorage.setItem('token', cleanToken); // Use cleanToken

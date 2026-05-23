@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { scheduleApi } from '../api/scheduleApi';
 import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, Clock, Calendar as CalendarIcon, BookOpen, Zap, Coffee, FileWarning } from 'lucide-react';
@@ -9,7 +8,6 @@ import '../assets/CalendarView.css';
 const GOOGLE_AUTH_ORIGIN = 'https://studyplanner-api-awmh.onrender.com';
 
 export default function CalendarView() {
-  const navigate = useNavigate();
   const [blocks, setBlocks] = useState([]);
   const [exams, setExams] = useState([]);
   const [view, setView] = useState('month');
@@ -271,25 +269,42 @@ export default function CalendarView() {
     toast.success('Exported! Open with your calendar app');
   };
 
-  // FIXED: Proper error handling, no err reference in finally
-const syncGoogle = async () => {
-  setSyncing(true);
+  const syncGoogle = async () => {
+    setSyncing(true);
 
-  try {
-    const res = await API.post('/schedule/google/sync');
-    toast.success(res.data.msg);
-    setGoogleConnected(true);
-  } catch (err) {
-    if (err.response?.data?.needsAuth) {
-      toast.error('Please connect Google Calendar first');
-      navigate('/profile');
-    } else {
-      toast.error(err.response?.data?.msg || 'Sync failed');
+    try {
+      const res = await API.get('/schedule/google/sync');
+      if (res.data.success) {
+        toast.success(`Synced ${res.data.synced} blocks to Google Calendar`);
+        setGoogleConnected(true);
+      }
+    } catch (err) {
+      if (err.response?.data?.action === 'CONNECT_CALENDAR' || err.response?.data?.needsAuth) {
+        toast('Connect Google Calendar first');
+        const popup = window.open(
+          `${GOOGLE_AUTH_ORIGIN}/api/auth/google/calendar`,
+          'gcal-connect',
+          'width=500,height=600'
+        );
+
+        const handler = (event) => {
+          if (event.origin !== GOOGLE_AUTH_ORIGIN) return;
+          if (event.data?.type === 'google-calendar-success') {
+            window.removeEventListener('message', handler);
+            popup?.close();
+            toast.success('Calendar connected. Retrying sync...');
+            setGoogleConnected(true);
+            syncGoogle();
+          }
+        };
+        window.addEventListener('message', handler);
+      } else {
+        toast.error(err.response?.data?.message || err.response?.data?.msg || 'Sync failed');
+      }
+    } finally {
+      setSyncing(false);
     }
-  } finally {
-    setSyncing(false);
-  }
-};
+  };
 
   const getMonthDays = () => {
     const year = currentDate.getFullYear();
