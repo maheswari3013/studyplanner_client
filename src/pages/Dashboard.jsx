@@ -19,6 +19,42 @@ const AFFIRMATIONS = [
   "You're closer than you were yesterday."
 ];
 
+const CircularProgress = ({ percent, label, subtext }) => {
+  const size = 112;
+  const strokeWidth = 8;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const safePercent = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+  const offset = circumference - (safePercent / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="transform -rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={radius} stroke="#E5E7EB" strokeWidth={strokeWidth} fill="none" />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="#2563EB"
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xl font-bold">{Math.round(safePercent)}%</span>
+        </div>
+      </div>
+      <div className="text-sm font-medium mt-2">{label}</div>
+      <div className="text-xs text-gray-500">{subtext}</div>
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -213,31 +249,17 @@ export default function Dashboard() {
           </div>
           <div className="progress-rings">
             {subjectProgress.map(sub => {
-              const percent = sub.planned > 0? Math.round((sub.completed / sub.planned) * 100) : 0;
-              const strokeDasharray = 2 * Math.PI * 45;
-              const strokeDashoffset = strokeDasharray * (1 - percent / 100);
+              const completedHours = Number(sub.completed) || 0;
+              const totalHours = Number(sub.planned) || 0;
+              const percent = totalHours > 0 ? (completedHours / totalHours) * 100 : 0;
 
               return (
                 <div key={sub.subject} className="ring-item">
-                  <svg className="progress-ring" width="120" height="120">
-                    <circle
-                      className="ring-bg"
-                      cx="60" cy="60" r="45"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      className="ring-fill"
-                      cx="60" cy="60" r="45"
-                      strokeWidth="8"
-                      strokeDasharray={strokeDasharray}
-                      strokeDashoffset={strokeDashoffset}
-                    />
-                  </svg>
-                  <div className="ring-label">
-                    <span className="ring-percent">{percent}%</span>
-                    <span className="ring-subject">{sub.subject}</span>
-                    <span className="ring-detail">{sub.completed}/{sub.planned}h</span>
-                  </div>
+                  <CircularProgress
+                    percent={percent}
+                    label={sub.subject}
+                    subtext={`${completedHours.toFixed(1)}/${totalHours.toFixed(1)}h`}
+                  />
                 </div>
               );
             })}
