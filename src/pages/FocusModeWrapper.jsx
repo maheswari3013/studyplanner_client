@@ -23,7 +23,12 @@ export default function FocusModeWrapper() {
       toast.success('Block completed!');
       navigate('/agenda');
     } catch (err) {
-      toast.error('Failed to mark complete');
+      if (err.response?.status === 404) {
+        toast('Schedule was regenerated. Refreshing...');
+        navigate('/agenda');
+      } else {
+        toast.error('Failed to mark complete');
+      }
     }
   };
 

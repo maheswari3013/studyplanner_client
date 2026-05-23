@@ -1,11 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { scheduleApi } from '../api/scheduleApi';
 import { ChevronLeft, ChevronRight, Download, FileText, X, AlertTriangle, Link, Clock, Calendar as CalendarIcon, BookOpen, Zap, Coffee, FileWarning } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import '../assets/CalendarView.css';
 
+const GOOGLE_AUTH_ORIGIN = 'https://studyplanner-api-awmh.onrender.com';
+
 export default function CalendarView() {
+  const navigate = useNavigate();
   const [blocks, setBlocks] = useState([]);
   const [exams, setExams] = useState([]);
   const [view, setView] = useState('month');
@@ -18,59 +22,11 @@ export default function CalendarView() {
   const [syncing, setSyncing] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(false);
-  const googleAuthTimeout = useRef(null);
+  const [isCompleting, setIsCompleting] = useState({});
   const [loggingBlock, setLoggingBlock] = useState(null);
   const [actualMinutes, setActualMinutes] = useState('');
 
-  const getBlockData = (block) => {
-    if (block.isExam) return { class: 'block-exam', icon: FileWarning, label: 'EXAM' };
-    if (block.missed) return { class: 'block-missed', icon: AlertTriangle, label: 'Missed' };
-    if (block.completed) return { class: 'block-done', icon: Zap, label: 'Done' };
-    if (block.isBreak) return { class: 'block-break', icon: Coffee, label: 'Break' };
-    if (block.type === 'Review') return { class: 'block-review', icon: BookOpen, label: 'Review' };
-    return { class: 'block-study', icon: CalendarIcon, label: 'Study' };
-  };
-
-  useEffect(() => {
-    fetchData();
-    checkGoogleConnection();
-
-    const handleMessage = async (event) => {
-      const message = event.data;
-      const success =
-        message === 'google-auth-success' ||
-        message?.type === 'GOOGLE_AUTH_SUCCESS';
-      const error =
-        message === 'google-auth-error' ||
-        message?.type === 'GOOGLE_AUTH_ERROR';
-
-      if (success) {
-        toast.success('Google connected!');
-        clearTimeout(googleAuthTimeout.current);
-        googleAuthTimeout.current = null;
-        setGoogleConnected(true);
-        await fetchData();
-        setSyncing(false);
-      }
-
-      if (error) {
-        const errMsg =
-          typeof message === 'object' ? message.error : 'Google auth failed';
-        toast.error('Google connect failed: ' + errMsg);
-        clearTimeout(googleAuthTimeout.current);
-        googleAuthTimeout.current = null;
-        setSyncing(false);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => {
-      clearTimeout(googleAuthTimeout.current);
-      window.removeEventListener('message', handleMessage);
-    };
-  }, []);
-
-  const fetchData = async () => {
+  async function fetchData() {
     setScheduleLoading(true);
     try {
       const [blocksRes, examsRes] = await Promise.all([
@@ -85,45 +41,94 @@ export default function CalendarView() {
     } finally {
       setScheduleLoading(false);
     }
-  };
+  }
 
-  // FIXED: Use /schedule/google/status not /auth/user
-  const checkGoogleConnection = async () => {
+  async function checkGoogleConnection() {
     try {
       const res = await API.get('/schedule/google/status');
       setGoogleConnected(res.data.connected);
     } catch {
       setGoogleConnected(false);
     }
+  }
+
+  const getBlockData = (block) => {
+    if (block.isExam) return { class: 'block-exam', icon: FileWarning, label: 'EXAM' };
+    if (block.missed) return { class: 'block-missed', icon: AlertTriangle, label: 'Missed' };
+    if (block.completed) return { class: 'block-done', icon: Zap, label: 'Done' };
+    if (block.isBreak) return { class: 'block-break', icon: Coffee, label: 'Break' };
+    if (block.type === 'Review') return { class: 'block-review', icon: BookOpen, label: 'Review' };
+    return { class: 'block-study', icon: CalendarIcon, label: 'Study' };
   };
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      fetchData();
+      checkGoogleConnection();
+    });
+
+    const handleMessage = async (event) => {
+      if (event.origin !== GOOGLE_AUTH_ORIGIN) return;
+
+      const message = event.data;
+      const success =
+        message?.type === 'google-auth-success' ||
+        message?.type === 'GOOGLE_AUTH_SUCCESS';
+      const error =
+        message?.type === 'google-auth-error' ||
+        message?.type === 'GOOGLE_AUTH_ERROR';
+
+      if (success) {
+        toast.success('Google connected!');
+        setGoogleConnected(true);
+        await fetchData();
+        setSyncing(false);
+      }
+
+      if (error) {
+        const errMsg =
+          typeof message === 'object' ? message.error : 'Google auth failed';
+        toast.error('Google connect failed: ' + errMsg);
+        setSyncing(false);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []);
 
   const handleMarkMissed = async (blockId) => {
     setScheduleLoading(true);
+    setIsCompleting(prev => ({ ...prev, [blockId]: true }));
     try {
       const latestBlock = blocks.find(b => b._id === blockId);
       if (!latestBlock) {
-        toast('Schedule was regenerated. Refreshing...');
+        toast('This session was updated. Refreshing...');
         await fetchData();
         setSelectedDay(null);
         return;
       }
 
       const res = await scheduleApi.markMissed(latestBlock._id);
-      if (res.data.success) {
+      if (res?.notFound) {
+        toast('This session was updated. Refreshing...');
+        await fetchData();
+        setSelectedDay(null);
+        return;
+      }
+
+      if (res.data?.success) {
         toast.success(`Rescheduled! Created ${res.data.newBlocksCreated} new blocks`);
         await fetchData();
         setSelectedDay(null);
       }
     } catch (err) {
-      if (err.response?.status === 404) {
-        toast('Schedule was regenerated. Refreshing...');
-        await fetchData();
-        setSelectedDay(null);
-      } else {
-        toast.error(err.response?.data?.msg || 'Failed to reschedule');
-      }
+      toast.error(err.response?.data?.msg || 'Failed to reschedule');
     } finally {
       setScheduleLoading(false);
+      setIsCompleting(prev => ({ ...prev, [blockId]: false }));
     }
   };
 
@@ -207,7 +212,7 @@ export default function CalendarView() {
 
       setShowPdfModal(false);
       toast.success('PDF exported');
-    } catch (err) {
+    } catch {
       toast.error('PDF export failed');
     } finally {
       setExporting(false);
@@ -268,7 +273,6 @@ export default function CalendarView() {
   // FIXED: Proper error handling, no err reference in finally
 const syncGoogle = async () => {
   setSyncing(true);
-  let openedPopup = false;
 
   try {
     const res = await API.post('/schedule/google/sync');
@@ -276,28 +280,14 @@ const syncGoogle = async () => {
     setGoogleConnected(true);
   } catch (err) {
     if (err.response?.data?.needsAuth) {
-      openedPopup = true;
-      const authRes = await scheduleApi.getGoogleAuthUrl();
-      const popup = window.open(authRes.data.url, '_blank', 'width=500,height=600');
-
-      if (!popup) {
-        toast.error('Popup blocked. Allow popups and try again.');
-        setSyncing(false);
-        return;
-      }
-
-      toast('Complete Google login in the popup');
-      googleAuthTimeout.current = window.setTimeout(() => {
-        setSyncing(false);
-        toast('Google login did not complete. Please try again.');
-      }, 120000);
+      toast.error('Please connect Google Calendar first');
+      navigate('/profile');
     } else {
       toast.error(err.response?.data?.msg || 'Sync failed');
-      setSyncing(false);
     }
+  } finally {
+    setSyncing(false);
   }
-
-  if (!openedPopup) setSyncing(false);
 };
 
   const getMonthDays = () => {
@@ -436,13 +426,14 @@ const syncGoogle = async () => {
               <p className="empty-day">No study blocks or exams scheduled</p>
             ) : (
               selectedDay.blocks.map(block => {
-                const { icon: Icon } = getBlockData(block);
                 const blockColor = block.color || '#3B82F6';
+                const blockTypeClass = block.isBreak || block.type === 'Break' ? 'break-block' : 'study-block';
+                const blockEmoji = block.isExam ? '📝' : block.isBreak || block.type === 'Break' ? '☕' : '📚';
                 return (
-                  <div key={block._id} className={`block-detail-pro ${getBlockData(block).class}`} style={{ borderLeft: `4px solid ${blockColor}` }}>
+                  <div key={block._id} className={`block-detail-pro ${getBlockData(block).class} ${blockTypeClass}`} style={{ borderLeft: `4px solid ${blockColor}` }}>
                     <div className="block-detail-header-pro">
                       <div className="block-icon" style={{ color: blockColor }}>
-                        <Icon size={20} />
+                        {blockEmoji}
                       </div>
                       <div className="block-detail-content">
                         <div className="block-title-pro">
@@ -465,9 +456,9 @@ const syncGoogle = async () => {
                             onClick={() => handleMarkMissed(block._id)}
                             className="missed-btn-pro"
                             title="Mark as missed - will reschedule"
-                            disabled={scheduleLoading || syncing}
+                            disabled={scheduleLoading || syncing || isCompleting[block._id]}
                           >
-                            <AlertTriangle size={14} /> Missed
+                            <AlertTriangle size={14} /> {isCompleting[block._id] ? 'Processing...' : 'Missed'}
                           </button>
                         )}
                         {block.completed && !block.isBreak && !block.isExam && (
@@ -485,6 +476,9 @@ const syncGoogle = async () => {
                   </div>
                 );
               })
+            )}
+            {selectedDay.blocks.length > 0 && (selectedDay.blocks[selectedDay.blocks.length - 1]?.isBreak || selectedDay.blocks[selectedDay.blocks.length - 1]?.type === 'Break') && (
+              <div className="day-end-warning">Day ends with break</div>
             )}
           </div>
         </div>
@@ -590,17 +584,17 @@ const syncGoogle = async () => {
                   {day.getDate()}
                 </div>
                 {dayBlocks.slice(0, maxVisible).map(block => {
-                  const { icon: Icon } = getBlockData(block);
                   const blockColor = block.color || '#3B82F6';
+                  const blockEmoji = block.isExam ? '📝' : block.isBreak || block.type === 'Break' ? '☕' : '📚';
                   return (
                     <div
                       key={block._id}
-                      className={`block-pro ${getBlockData(block).class}`}
+                      className={`block-pro ${getBlockData(block).class} ${block.isBreak || block.type === 'Break' ? 'break-block' : 'study-block'}`}
                       style={{ backgroundColor: blockColor }}
                       title={`${block.time} - ${block.subject}: ${block.topic}`}
                     >
-                      <Icon size={12} />
-                      <span>{block.isExam ? `📝 ${block.subject}` : `${block.time} ${block.subject}`}</span>
+                      <span>{blockEmoji}</span>
+                      <span>{block.isExam ? `${block.subject}` : `${block.time} ${block.subject}`}</span>
                       {block.actualDuration > 0 && <span className="actual-badge-pro">{block.actualDuration}m</span>}
                     </div>
                   );

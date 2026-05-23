@@ -5,6 +5,9 @@ import '../assets/profile.css';
 import { exportToPDF, exportToICS } from '../utils/exportUtils';
 import toast from 'react-hot-toast';
 
+const GOOGLE_AUTH_ORIGIN = 'https://studyplanner-api-awmh.onrender.com';
+const API_ORIGIN = (import.meta.env.VITE_API_URL || GOOGLE_AUTH_ORIGIN).replace(/\/api\/?$/, '');
+
 const validatePassword = (password) => {
   const minLength = password.length >= 8;
   const hasUpper = /[A-Z]/.test(password);
@@ -26,7 +29,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export default function Profile() {
-  const { user, logout, updateUser } = useContext(AuthContext);
+  const { user, logout, updateUser, fetchUser } = useContext(AuthContext);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -43,7 +46,8 @@ export default function Profile() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifStatus, setNotifStatus] = useState('checking');
-  const [googleStatus, setGoogleStatus] = useState('checking'); // ADD THIS
+  const [googleConnectionOverride, setGoogleConnectionOverride] = useState(null);
+  const isGoogleConnected = googleConnectionOverride ?? !!user?.googleTokens?.access_token;
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -54,19 +58,31 @@ export default function Profile() {
       }
     };
 
-    // ADD THIS: Check Google Calendar connection
-    const checkGoogleStatus = async () => {
-      try {
-        const res = await API.get('/schedule/google/status');
-        setGoogleStatus(res.data.connected? 'connected' : 'disconnected');
-      } catch {
-        setGoogleStatus('disconnected');
+    checkSubscription();
+  }, []);
+
+  useEffect(() => {
+    const handler = async (event) => {
+      if (event.origin !== GOOGLE_AUTH_ORIGIN) return;
+
+      if (event.data?.type === 'google-auth-success' || event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+        toast.success('Google Calendar connected');
+        setGoogleConnectionOverride(true);
+        try {
+          await fetchUser?.();
+        } catch {
+          setGoogleConnectionOverride(true);
+        }
+      }
+
+      if (event.data?.type === 'google-auth-error' || event.data?.type === 'GOOGLE_AUTH_ERROR') {
+        toast.error('Google connect failed');
       }
     };
 
-    checkSubscription();
-    checkGoogleStatus();
-  }, []);
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [fetchUser]);
 
   const resetEmailFlow = () => {
     setEmailChangeStep(0);
@@ -94,27 +110,20 @@ export default function Profile() {
     }
   };
 
-  // ADD THIS: Google Calendar Connect
-  const handleConnectGoogle = async () => {
-    try {
-      const res = await API.get('/schedule/google/auth');
-      const popup = window.open(res.data.url, '_blank', 'width=500,height=600');
+  const handleConnectGoogle = () => {
+    const width = 500;
+    const height = 600;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
 
-      const handleMessage = (event) => {
-        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-          setGoogleStatus('connected');
-          toast.success('Google Calendar connected!');
-          window.removeEventListener('message', handleMessage);
-          popup?.close();
-        }
-        if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-          toast.error('Google connection failed');
-          window.removeEventListener('message', handleMessage);
-        }
-      };
-      window.addEventListener('message', handleMessage);
-    } catch (err) {
-      toast.error('Failed to connect Google Calendar');
+    const popup = window.open(
+      `${API_ORIGIN}/api/auth/google`,
+      'google-oauth',
+      `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    if (!popup) {
+      toast.error('Popup blocked. Allow popups and try again.');
     }
   };
 
@@ -135,10 +144,11 @@ export default function Profile() {
   // ADD THIS: Disconnect Google
   const handleDisconnectGoogle = async () => {
     try {
-      await API.delete('/schedule/google/disconnect');
-      setGoogleStatus('disconnected');
+      await API.delete('/auth/google/disconnect');
+      setGoogleConnectionOverride(false);
+      await fetchUser?.();
       toast.success('Google Calendar disconnected');
-    } catch (err) {
+    } catch {
       toast.error('Failed to disconnect');
     }
   };
@@ -283,8 +293,9 @@ export default function Profile() {
       <div className="password-card">
         <h3>Google Calendar</h3>
         <div className="profile-actions">
-          {googleStatus === 'connected'? (
+          {isGoogleConnected? (
             <>
+              <p>Connected to Google Calendar ✓</p>
               <button onClick={handleSyncCalendar} className="btn-primary">
                 Sync to Google Calendar
               </button>

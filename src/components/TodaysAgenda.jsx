@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
+import { scheduleApi } from '../api/scheduleApi';
 import StudyTimer from '../components/StudyTimer';
 import { Maximize2, ClockIcon, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -16,6 +17,7 @@ export default function TodaysAgenda() {
   const [startDate, setStartDate] = useState('');
   const [generating, setGenerating] = useState(false);
   const [activeTimerBlock, setActiveTimerBlock] = useState(null);
+  const [isCompleting, setIsCompleting] = useState({});
 
   const [dayStartsAt, setDayStartsAt] = useState(9);
   const [dayEndsAt, setDayEndsAt] = useState(18);
@@ -47,43 +49,49 @@ export default function TodaysAgenda() {
   };
 
   const markComplete = async (id) => {
+    setIsCompleting(prev => ({ ...prev, [id]: true }));
     try {
-      setBlocks(prev => prev.map(b => b._id === id? {...b, completed: true, missed: false } : b));
-      await API.patch(`/schedule/${id}/complete`);
-      setActiveTimerBlock(null);
-      toast.success('Marked as complete!');
-    } catch (err) {
-      if (err.response?.status === 404) {
-        toast('Schedule was regenerated. Refreshing...');
+      setBlocks(prev => prev.map(b => b._id === id ? { ...b, completed: true, missed: false } : b));
+      const res = await scheduleApi.completeBlock(id);
+      if (res?.notFound) {
+        toast('This session was updated. Refreshing...');
       } else {
-        toast.error('Failed to complete');
+        setActiveTimerBlock(null);
+        toast.success('Marked as complete!');
       }
+    } catch (err) {
+      toast.error('Failed to complete');
+    } finally {
       await fetchToday();
+      setIsCompleting(prev => ({ ...prev, [id]: false }));
     }
   };
 
   // UPDATED: Keep missed blocks visible in red + reschedule
   const markMissed = async (id) => {
+    setIsCompleting(prev => ({ ...prev, [id]: true }));
     try {
       // Optimistic update - turn red immediately
-      setBlocks(prev => prev.map(b => b._id === id? {...b, missed: true, completed: false } : b));
+      setBlocks(prev => prev.map(b => b._id === id ? { ...b, missed: true, completed: false } : b));
       setActiveTimerBlock(null);
 
-      const res = await API.patch(`/schedule/${id}/missed`);
-      console.log('Missed response:', res.data);
-
-      toast.success(`Marked as missed. Rescheduled ${res.data.newBlocksCreated} new blocks`);
-
-      await fetchToday();
-
+      const res = await scheduleApi.markMissed(id);
+      if (res?.notFound) {
+        toast('This session was updated. Refreshing...');
+      } else {
+        console.log('Missed response:', res.data);
+        toast.success(`Marked as missed. Rescheduled ${res.data.newBlocksCreated} new blocks`);
+      }
     } catch (err) {
       if (err.response?.status === 404) {
-        toast('Schedule was regenerated. Refreshing...');
+        toast('This session was updated. Refreshing...');
       } else {
         console.error('Missed error:', err.response?.data);
         toast.error(err.response?.data?.msg || 'Failed to mark missed');
       }
+    } finally {
       await fetchToday();
+      setIsCompleting(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -155,12 +163,14 @@ export default function TodaysAgenda() {
   const generateSchedule = async () => {
     if (!confirm('This will delete your current schedule and regenerate. Continue?')) return;
     setGenerating(true);
+    setLoading(true);
     try {
       const examsRes = await API.get('/exams');
       const exams = examsRes.data;
       if (!exams.length) {
         toast.error('No exams found. Create an exam first.');
         setGenerating(false);
+        setLoading(false);
         return;
       }
 
@@ -177,22 +187,47 @@ export default function TodaysAgenda() {
       toast.success(`Generated ${res.data.count} blocks`);
       setShowDateModal(false);
       setStartDate('');
+      setActiveTimerBlock(null);
       await fetchToday();
-      if (res.data.warnings?.length) toast(res.data.warnings.join(', '), { icon: '⚠️' });
+      toast.success('Schedule updated');
+      if (res.data.warnings?.length) toast(res.data.warnings.join(', '), { icon: 'âš ï¸' });
     } catch (err) {
       console.error('Generate failed:', err);
       toast.error(err.response?.data?.msg || 'Failed to generate');
     } finally {
       setGenerating(false);
+      setLoading(false);
     }
   };
+
+  const sortedBlocks = [...blocks].sort((a, b) => {
+    const timeA = (a.startTime || a.time || '').toString();
+    const timeB = (b.startTime || b.time || '').toString();
+    return timeA.localeCompare(timeB);
+  });
+
+  if (import.meta.env.DEV) {
+    sortedBlocks.forEach((block, idx) => {
+      const next = sortedBlocks[idx + 1];
+      if (next && (block.startTime || block.time) === (next.startTime || next.time)) {
+        console.warn('Overlap detected in agenda:', block, next);
+      }
+    });
+  }
+
+  const groupedBlocks = sortedBlocks.reduce((groups, block) => {
+    const dateKey = block.date ? block.date.split('T')[0] : 'unknown';
+    if (!groups[dateKey]) groups[dateKey] = [];
+    groups[dateKey].push(block);
+    return groups;
+  }, {});
 
   return (
     <div className="agenda-container">
       <div className="agenda-header">
         <h2>Today's Agenda</h2>
         <button onClick={() => setShowDateModal(true)} disabled={generating} className="btn-generate-schedule">
-          {generating? 'Generating...' : '🔄 Generate New Schedule'}
+          {generating? 'Generating...' : 'ðŸ”„ Generate New Schedule'}
         </button>
       </div>
 
@@ -252,73 +287,90 @@ export default function TodaysAgenda() {
 
       {loading? (
         <p className="loading-text">Loading...</p>
-      ) : blocks.length === 0? (
+      ) : sortedBlocks.length === 0? (
         <p className="empty-state">No study blocks for today. Click generate!</p>
       ) : (
-        blocks.map(block => {
-          const isBreak = block.isBreak || block.type === 'Break';
-          const isCompleted = block.completed;
-          const isMissed = block.missed;
-          const isPending =!isCompleted &&!isMissed;
-          const isStudyOrReview = block.type === 'Study' || block.type === 'Review';
-          const overdue = isOverdue(block);
-
+        Object.keys(groupedBlocks).sort().map((date) => {
+          const dayBlocks = groupedBlocks[date];
+          const lastBlock = dayBlocks[dayBlocks.length - 1];
+          const dayEndsWithBreak = lastBlock && (lastBlock.isBreak || lastBlock.type === 'Break');
           return (
-            <div key={block._id} className={`block-card ${isBreak? 'break' : ''} ${isCompleted? 'completed' : ''} ${isMissed? 'missed' : ''} ${overdue &&!isMissed? 'overdue' : ''}`}>
-              <div className="block-card-header">
-                <div className="block-card-content">
-                  <h3>{block.subject} - {block.topic}</h3>
-                  <p className="block-meta">
-                    <span><b>Type:</b> {block.type}</span>
-                    <span><b>Duration:</b> {block.duration} min</span>
-                    <span><b>Time:</b> {block.time}</span>
-                  </p>
-                  {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
-                  {overdue &&!isMissed && <span className="overdue-badge">⚠️ Overdue</span>}
-                  {isMissed && <span className="missed-badge">✗ Missed - Rescheduled</span>}
-                </div>
-                <div className="block-card-controls">
-                  <button className="edit-btn" onClick={() => openEditModal(block)}>✎</button>
-                  <button className="delete-btn" onClick={() => deleteBlock(block._id)}>✕</button>
-                </div>
+            <div key={date} className="agenda-day-group">
+              <div className="agenda-day-header">
+                <h3>{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
               </div>
+              {dayBlocks.map(block => {
+                const isBreak = block.isBreak || block.type === 'Break';
+                const isCompleted = block.completed;
+                const isMissed = block.missed;
+                const isPending = !isCompleted && !isMissed;
+                const isStudyOrReview = block.type === 'Study' || block.type === 'Review';
+                const overdue = isOverdue(block);
+                const blockEmoji = block.isExam ? 'ðŸ“' : isBreak ? 'â˜•' : 'ðŸ“š';
+                const blockTypeClass = isBreak ? 'break-block' : 'study-block';
 
-              <div className="block-actions">
-                {isPending && isStudyOrReview && (
-                  <>
-                    <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
-                      ▶ Start Timer
-                    </button>
-                    <button onClick={() => navigate('/focus', { state: { block } })} className="btn-focus">
-                      <Maximize2 size={16} /> Focus
-                    </button>
-                    <button onClick={() => markComplete(block._id)} className="btn-complete">
-                      ✓ Complete
-                    </button>
-                    <button onClick={() => markMissed(block._id)} className="btn-missed">
-                      X Missed
-                    </button>
-                  </>
-                )}
+                return (
+                  <div key={block._id} className={`block-card ${blockTypeClass} ${isBreak ? 'break' : ''} ${isCompleted ? 'completed' : ''} ${isMissed ? 'missed' : ''} ${overdue && !isMissed ? 'overdue' : ''}`}>
+                    <div className="block-card-header">
+                      <div className="block-card-content">
+                        <h3>{blockEmoji} {block.subject} - {block.topic}</h3>
+                        <p className="block-meta">
+                          <span><b>Type:</b> {block.type}</span>
+                          <span><b>Duration:</b> {block.duration} min</span>
+                          <span><b>Time:</b> {block.time}</span>
+                        </p>
+                        {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
+                        {overdue && !isMissed && <span className="overdue-badge">âš ï¸ Overdue</span>}
+                        {isMissed && <span className="missed-badge">âœ— Missed - Rescheduled</span>}
+                      </div>
+                      <div className="block-card-controls">
+                        <button className="edit-btn" onClick={() => openEditModal(block)}>âœŽ</button>
+                        <button className="delete-btn" onClick={() => deleteBlock(block._id)}>âœ•</button>
+                      </div>
+                    </div>
 
-                {isCompleted && (
-                  <>
-                    <span className="status-badge completed">✓ Completed</span>
-                    <button onClick={() => markPending(block._id)} className="btn-pending">
-                      <ClockIcon size={16} /> Set Pending
-                    </button>
-                  </>
-                )}
+                    <div className="block-actions">
+                      {isPending && isStudyOrReview && (
+                        <>
+                          <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
+                            â–¶ Start Timer
+                          </button>
+                          <button onClick={() => navigate('/focus', { state: { block } })} className="btn-focus">
+                            <Maximize2 size={16} /> Focus
+                          </button>
+                          <button onClick={() => markComplete(block._id)} disabled={isCompleting[block._id]} className="btn-complete">
+                            âœ“ {isCompleting[block._id] ? 'Processing...' : 'Complete'}
+                          </button>
+                          <button onClick={() => markMissed(block._id)} disabled={isCompleting[block._id]} className="btn-missed">
+                            X {isCompleting[block._id] ? 'Processing...' : 'Missed'}
+                          </button>
+                        </>
+                      )}
 
-                {isMissed && (
-                  <>
-                    <span className="status-badge missed">✗ Missed</span>
-                    <button onClick={() => markPending(block._id)} className="btn-pending">
-                      <ClockIcon size={16} /> Undo Missed
-                    </button>
-                  </>
-                )}
-              </div>
+                      {isCompleted && (
+                        <>
+                          <span className="status-badge completed">âœ“ Completed</span>
+                          <button onClick={() => markPending(block._id)} className="btn-pending">
+                            <ClockIcon size={16} /> Set Pending
+                          </button>
+                        </>
+                      )}
+
+                      {isMissed && (
+                        <>
+                          <span className="status-badge missed">âœ— Missed</span>
+                          <button onClick={() => markPending(block._id)} className="btn-pending">
+                            <ClockIcon size={16} /> Undo Missed
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {dayEndsWithBreak && (
+                <div className="day-end-warning">Day ends with break</div>
+              )}
             </div>
           );
         })

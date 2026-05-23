@@ -110,7 +110,12 @@ export function ScheduleProvider({ children }) {
       }
       return false;
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to reschedule');
+      if (err.response?.status === 404) {
+        toast('Schedule was regenerated. Refreshing...');
+        await fetchSchedule();
+      } else {
+        toast.error(err.response?.data?.msg || 'Failed to reschedule');
+      }
       return false;
     }
   }, [fetchSchedule]);

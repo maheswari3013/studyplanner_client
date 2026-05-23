@@ -74,7 +74,12 @@ export default function Dashboard() {
       toast.success('Block completed!');
       fetchDashboardData();
     } catch (err) {
-      toast.error('Failed to complete block');
+      if (err.response?.status === 404) {
+        toast('Schedule was regenerated. Refreshing...');
+        fetchDashboardData();
+      } else {
+        toast.error('Failed to complete block');
+      }
     }
   };
 

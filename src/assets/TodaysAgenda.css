@@ -97,6 +97,20 @@
   display: none;
 }
 
+.study-block + .break-block {
+  border-top: 2px dashed #60a5fa;
+}
+
+.day-end-warning {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #eff6ff;
+  border: 1px dashed #60a5fa;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
 .block-card-header {
   display: flex;
   justify-content: space-between;

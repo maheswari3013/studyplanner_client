@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import API from '../api/axios'; // Use the same instance
 
 export const AuthContext = createContext();
@@ -8,14 +9,38 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const persistUser = useCallback((userData) => {
+    const safeUserData = { ...(userData || {}) };
+    delete safeUserData.googleTokens;
+    localStorage.setItem('user', JSON.stringify(safeUserData));
+  }, []);
+
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await API.get('/user/me');
+      setUser(res.data);
+      persistUser(res.data);
+      return res.data;
+    } catch {
+      const res = await API.get('/auth/user');
+      setUser(res.data);
+      persistUser(res.data);
+      return res.data;
+    }
+  }, [persistUser]);
+
+  const updateUser = useCallback((userData) => {
+    setUser(userData);
+    persistUser(userData);
+  }, [persistUser]);
+
   useEffect(() => {
     const loadUser = async () => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         try {
-          const res = await API.get('/auth/user'); 
-          console.log('User from /auth/user:', res.data);
-          setUser(res.data);
+          const userData = await fetchUser();
+          console.log('User from API:', userData);
           setToken(storedToken);
         } catch (err) {
           console.error('Load user failed:', err);
@@ -28,12 +53,12 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     loadUser();
-  }, []);
+  }, [fetchUser]);
 
   const setAuthData = (token, userData) => {
   const cleanToken = token.trim(); // ADD THIS LINE
   localStorage.setItem('token', cleanToken); // Use cleanToken
-  localStorage.setItem('user', JSON.stringify(userData));
+  persistUser(userData);
   setToken(cleanToken); // Use cleanToken
   setUser(userData);
 };
@@ -46,7 +71,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, setAuthData, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, setAuthData, logout, loading, updateUser, fetchUser }}>
       {children}
     </AuthContext.Provider>
   );
