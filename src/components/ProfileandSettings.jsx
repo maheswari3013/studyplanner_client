@@ -65,7 +65,11 @@ export default function Profile() {
     const handler = async (event) => {
       if (event.origin !== GOOGLE_AUTH_ORIGIN) return;
 
-      if (event.data?.type === 'google-auth-success' || event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+      if (
+        event.data?.type === 'google-calendar-success' ||
+        event.data?.type === 'google-auth-success' ||
+        event.data?.type === 'GOOGLE_AUTH_SUCCESS'
+      ) {
         toast.success('Google Calendar connected');
         setGoogleConnectionOverride(true);
         try {

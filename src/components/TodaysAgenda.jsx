@@ -1,9 +1,9 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { scheduleApi } from '../api/scheduleApi';
 import StudyTimer from '../components/StudyTimer';
-import { Maximize2, ClockIcon, Play } from 'lucide-react';
+import AgendaBlock from '../components/AgendaBlock';
 import toast from 'react-hot-toast';
 import '../assets/TodaysAgenda.css';
 
@@ -36,7 +36,7 @@ export default function TodaysAgenda() {
   };
 
   useEffect(() => {
-    fetchToday();
+    Promise.resolve().then(fetchToday);
   }, []);
 
   const isOverdue = (block) => {
@@ -59,7 +59,7 @@ export default function TodaysAgenda() {
         setActiveTimerBlock(null);
         toast.success('Marked as complete!');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to complete');
     } finally {
       await fetchToday();
@@ -100,19 +100,9 @@ export default function TodaysAgenda() {
       setBlocks(prev => prev.map(b => b._id === id? {...b, completed: false, missed: false } : b));
       await API.patch(`/schedule/${id}/pending`);
       toast.success('Reset to pending');
-    } catch (err) {
+    } catch {
       toast.error('Failed to reset');
       fetchToday();
-    }
-  };
-
-  const handleStartNow = async (id) => {
-    try {
-      const res = await API.post(`/schedule/${id}/start`);
-      toast.success(res.data.msg);
-      await fetchToday();
-    } catch (err) {
-      toast.error(err.response?.data?.msg || 'Failed to start');
     }
   };
 
@@ -121,7 +111,7 @@ export default function TodaysAgenda() {
       await API.patch(`/schedule/${id}`, { duration: currentDuration + 15 });
       toast.success('+15 minutes added');
       fetchToday();
-    } catch (err) {
+    } catch {
       toast.error('Failed to add time');
     }
   };
@@ -132,7 +122,7 @@ export default function TodaysAgenda() {
       await API.delete(`/schedule/${id}`);
       toast.success('Block deleted');
       fetchToday();
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete');
     }
   };
@@ -155,7 +145,7 @@ export default function TodaysAgenda() {
       setEditingBlock(null);
       toast.success('Block updated');
       fetchToday();
-    } catch (err) {
+    } catch {
       toast.error('Failed to update');
     }
   };
@@ -190,7 +180,7 @@ export default function TodaysAgenda() {
       setActiveTimerBlock(null);
       await fetchToday();
       toast.success('Schedule updated');
-      if (res.data.warnings?.length) toast(res.data.warnings.join(', '), { icon: 'âš ï¸' });
+      if (res.data.warnings?.length) toast(res.data.warnings.join(', '), { icon: '!' });
     } catch (err) {
       console.error('Generate failed:', err);
       toast.error(err.response?.data?.msg || 'Failed to generate');
@@ -227,7 +217,7 @@ export default function TodaysAgenda() {
       <div className="agenda-header">
         <h2>Today's Agenda</h2>
         <button onClick={() => setShowDateModal(true)} disabled={generating} className="btn-generate-schedule">
-          {generating? 'Generating...' : 'ðŸ”„ Generate New Schedule'}
+          {generating? 'Generating...' : 'Generate New Schedule'}
         </button>
       </div>
 
@@ -299,75 +289,21 @@ export default function TodaysAgenda() {
               <div className="agenda-day-header">
                 <h3>{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
               </div>
-              {dayBlocks.map(block => {
-                const isBreak = block.isBreak || block.type === 'Break';
-                const isCompleted = block.completed;
-                const isMissed = block.missed;
-                const isPending = !isCompleted && !isMissed;
-                const isStudyOrReview = block.type === 'Study' || block.type === 'Review';
-                const overdue = isOverdue(block);
-                const blockEmoji = block.isExam ? 'ðŸ“' : isBreak ? 'â˜•' : 'ðŸ“š';
-                const blockTypeClass = isBreak ? 'break-block' : 'study-block';
-
-                return (
-                  <div key={block._id} className={`block-card ${blockTypeClass} ${isBreak ? 'break' : ''} ${isCompleted ? 'completed' : ''} ${isMissed ? 'missed' : ''} ${overdue && !isMissed ? 'overdue' : ''}`}>
-                    <div className="block-card-header">
-                      <div className="block-card-content">
-                        <h3>{blockEmoji} {block.subject} - {block.topic}</h3>
-                        <p className="block-meta">
-                          <span><b>Type:</b> {block.type}</span>
-                          <span><b>Duration:</b> {block.duration} min</span>
-                          <span><b>Time:</b> {block.time}</span>
-                        </p>
-                        {block.topic?.includes('Makeup') && <span className="makeup-badge">Makeup Session</span>}
-                        {overdue && !isMissed && <span className="overdue-badge">âš ï¸ Overdue</span>}
-                        {isMissed && <span className="missed-badge">âœ— Missed - Rescheduled</span>}
-                      </div>
-                      <div className="block-card-controls">
-                        <button className="edit-btn" onClick={() => openEditModal(block)}>âœŽ</button>
-                        <button className="delete-btn" onClick={() => deleteBlock(block._id)}>âœ•</button>
-                      </div>
-                    </div>
-
-                    <div className="block-actions">
-                      {isPending && isStudyOrReview && (
-                        <>
-                          <button onClick={() => setActiveTimerBlock(block)} className="btn-start">
-                            â–¶ Start Timer
-                          </button>
-                          <button onClick={() => navigate('/focus', { state: { block } })} className="btn-focus">
-                            <Maximize2 size={16} /> Focus
-                          </button>
-                          <button onClick={() => markComplete(block._id)} disabled={isCompleting[block._id]} className="btn-complete">
-                            âœ“ {isCompleting[block._id] ? 'Processing...' : 'Complete'}
-                          </button>
-                          <button onClick={() => markMissed(block._id)} disabled={isCompleting[block._id]} className="btn-missed">
-                            X {isCompleting[block._id] ? 'Processing...' : 'Missed'}
-                          </button>
-                        </>
-                      )}
-
-                      {isCompleted && (
-                        <>
-                          <span className="status-badge completed">âœ“ Completed</span>
-                          <button onClick={() => markPending(block._id)} className="btn-pending">
-                            <ClockIcon size={16} /> Set Pending
-                          </button>
-                        </>
-                      )}
-
-                      {isMissed && (
-                        <>
-                          <span className="status-badge missed">âœ— Missed</span>
-                          <button onClick={() => markPending(block._id)} className="btn-pending">
-                            <ClockIcon size={16} /> Undo Missed
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {dayBlocks.map(block => (
+                <AgendaBlock
+                  key={block._id}
+                  block={block}
+                  overdue={isOverdue(block)}
+                  isCompleting={!!isCompleting[block._id]}
+                  onEdit={openEditModal}
+                  onDelete={deleteBlock}
+                  onStartTimer={setActiveTimerBlock}
+                  onFocus={(focusBlock) => navigate('/focus', { state: { block: focusBlock } })}
+                  onComplete={markComplete}
+                  onMissed={markMissed}
+                  onPending={markPending}
+                />
+              ))}
               {dayEndsWithBreak && (
                 <div className="day-end-warning">Day ends with break</div>
               )}

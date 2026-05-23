@@ -72,6 +72,7 @@ export default function CalendarView() {
 
       const message = event.data;
       const success =
+        message?.type === 'google-calendar-success' ||
         message?.type === 'google-auth-success' ||
         message?.type === 'GOOGLE_AUTH_SUCCESS';
       const error =

@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { examApi } from '../api/examApi';
 import { scheduleApi } from '../api/scheduleApi';
 import toast, { Toaster } from 'react-hot-toast';
+import { CalendarDays, GripVertical, MapPin, X } from 'lucide-react';
 import '../assets/exams.css';
 
 const defaultAvailableHours = {
@@ -48,7 +49,7 @@ function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence, edi
             title="Drag to reorder priority"
             style={{ pointerEvents: editingExam? 'none' : 'auto' }} // Error 4: Disable during edit
           >
-            ⋮⋮
+            <GripVertical size={18} />
           </div>
           <div>
             <div className="exam-title-row">
@@ -56,8 +57,8 @@ function SortableExamCard({ exam, idx, onDelete, onEdit, onUpdateConfidence, edi
               <span className="priority-badge">Priority {idx + 1}</span>
             </div>
             <p className="exam-meta">
-              📅 {new Date(exam.examDate).toLocaleDateString()} at {exam.time}
-              {exam.location && ` • 📍 ${exam.location}`}
+              <CalendarDays size={14} /> {new Date(exam.examDate).toLocaleDateString()} at {exam.time}
+              {exam.location && (<> <span aria-hidden="true">•</span> <MapPin size={14} /> {exam.location} </>)}
             </p>
           </div>
         </div>
@@ -166,7 +167,7 @@ export default function Exams() {
     try {
       const res = await examApi.getExams();
       setExams(res.data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load exams');
     } finally {
       setLoading(false);
@@ -174,29 +175,27 @@ export default function Exams() {
   };
 
   useEffect(() => {
-    fetchExams();
+    Promise.resolve().then(fetchExams);
   }, []);
 
-  const handleDragEnd = (event) => {
+  const handleDragEnd = async (event) => {
     const { active, over } = event;
-    if (active.id!== over?.id) {
-      setExams((items) => {
-        const oldIndex = items.findIndex(item => item._id === active.id);
-        const newIndex = items.findIndex(item => item._id === over.id);
-        const newItems = arrayMove(items, oldIndex, newIndex);
-        updatePriorities(newItems);
-        return newItems;
-      });
-    }
-  };
+    if (!over || active.id === over.id) return;
 
-  const updatePriorities = async (newExams) => {
+    const oldIndex = exams.findIndex(item => item._id === active.id);
+    const newIndex = exams.findIndex(item => item._id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const previousExams = exams;
+    const reorderedExams = arrayMove(exams, oldIndex, newIndex);
+    const orderedIds = reorderedExams.map(exam => exam._id);
+
+    setExams(reorderedExams);
     try {
-      await Promise.all(newExams.map((exam, idx) =>
-        examApi.updateExam(exam._id, { priority: idx + 1 })
-      ));
+      await examApi.reorderExams(orderedIds);
       toast.success('Priorities updated');
-    } catch (err) {
+    } catch {
+      setExams(previousExams);
       toast.error('Failed to update priorities');
     }
   };
@@ -479,7 +478,7 @@ export default function Exams() {
                     onChange={e => updateTopic(i, 'hours', e.target.value)}
                   />
                 )}
-                <button type="button" onClick={() => removeTopic(i)} className="btn-danger-sm">×</button>
+                <button type="button" onClick={() => removeTopic(i)} className="btn-danger-sm"><X size={14} /></button>
               </div>
             ))}
             <button type="button" onClick={addTopic} className="btn-secondary">+ Add Topic</button>
@@ -565,7 +564,7 @@ export default function Exams() {
         </div>
       ) : (
         <>
-          <p className="drag-hint">Drag ⋮⋮ to reorder priority. Higher = studied first.</p>
+          <p className="drag-hint">Drag the handle to reorder priority. Higher = studied first.</p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={validExams.map(e => e._id)} strategy={verticalListSortingStrategy}>
               <div className="exams-list">
@@ -588,3 +587,4 @@ export default function Exams() {
     </div>
   );
 }
+

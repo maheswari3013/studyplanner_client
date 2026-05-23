@@ -4,7 +4,7 @@ import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { validatePassword, getPasswordError } from '../utils/validatePassword';
-import { BarChart3, BrainCircuit, CalendarDays, KeyRound, LockKeyhole, Mail, Palette, UserRound } from 'lucide-react';
+import { BarChart3, BrainCircuit, CalendarDays, KeyRound, LockKeyhole, Mail, Moon, Palette, Sun, UserRound } from 'lucide-react';
 
 const VAPID_PUBLIC_KEY = 'BOHFuuYR-Esh5cxDIUQKh_Vqmvx5xMo70osWEiEZKmbJGQvKegSio0oGQMUbZuAypHhkp6JcZ5HlBu0A2sShFgs';
 
@@ -24,7 +24,7 @@ const Auth = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [theme, setTheme] = useState(getInitialTheme);
-  const { setAuthData } = useAuth();
+  const { setAuthData, fetchUser } = useAuth();
   const navigate = useNavigate();
 
   const { username, email, password, confirmPassword, otp } = formData;
@@ -33,6 +33,29 @@ const Auth = () => {
   useEffect(() => {
     window.localStorage.setItem('auth-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    const handler = async (e) => {
+      if (e.origin !== 'https://studyplanner-api-awmh.onrender.com') return;
+
+      if (e.data?.type === 'google-login-success') {
+        localStorage.setItem('token', e.data.token);
+        if (e.data.user) {
+          setAuthData(e.data.token, e.data.user);
+        } else {
+          await fetchUser?.();
+        }
+        navigate('/dashboard');
+      }
+
+      if (e.data?.type === 'google-calendar-success') {
+        toast.success('Calendar connected');
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [fetchUser, navigate, setAuthData]);
 
   const onChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value });
@@ -335,10 +358,10 @@ const Auth = () => {
         aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
         className={`absolute right-4 top-4 z-20 flex h-10 w-18 items-center justify-between rounded-full border px-2 transition duration-500 sm:right-6 sm:top-6 ${themeClasses.toggleTrack}`}
       >
-        <span className={`text-sm transition duration-300 ${isDark ? themeClasses.toggleIconMuted : 'text-white'}`}>☀️</span>
-        <span className={`text-sm transition duration-300 ${isDark ? 'text-[#F5F5F2]' : themeClasses.toggleIconMuted}`}>🌙</span>
+        <Sun size={14} className={`transition duration-300 ${isDark ? themeClasses.toggleIconMuted : 'text-white'}`} />
+        <Moon size={14} className={`transition duration-300 ${isDark ? 'text-[#F5F5F2]' : themeClasses.toggleIconMuted}`} />
         <span className={`absolute left-1 top-1 flex h-8 w-8 items-center justify-center rounded-full text-sm transition duration-500 ease-out ${themeClasses.toggleThumb}`}>
-          {isDark ? '🌙' : '☀️'}
+          {isDark ? <Moon size={14} /> : <Sun size={14} />}
         </span>
       </button>
 
@@ -449,6 +472,17 @@ const Auth = () => {
           }
         </button>
       </form>
+
+      {mode === 'login' && (
+        <button
+          type="button"
+          onClick={() => window.open('https://studyplanner-api-awmh.onrender.com/api/auth/google/login', 'popup', 'width=500,height=600')}
+          className={`mt-3 flex w-full items-center justify-center gap-3 rounded-xl border px-5 py-4 text-[15px] font-semibold transition duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 ${themeClasses.mutedButton}`}
+        >
+          <img src="/google-icon.svg" alt="" className="h-5 w-5" />
+          Sign in with Google
+        </button>
+      )}
 
       <div className="mt-5 flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
         {mode === 'login' && (

@@ -134,6 +134,9 @@
   color: var(--slate-900);
   transition: color 0.2s;
   letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .block-meta {
@@ -522,4 +525,11 @@
     margin: 20px;
     padding: 28px;
   }
+}
+
+.rescheduled-from {
+  margin: 8px 0 0;
+  color: var(--red-600);
+  font-size: 13px;
+  font-weight: 800;
 }
