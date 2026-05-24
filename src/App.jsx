@@ -108,7 +108,7 @@ function App() {
       <main className="app-shell">
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/auth" element={user? <Navigate to="/exams" /> : <Auth />} />
+            <Route path="/auth" element={user? <Navigate to="/dashboard" /> : <Auth />} />
 
             <Route path="/agenda" element={user? <TodaysAgenda /> : <Navigate to="/auth" />} />
             <Route path="/calendar" element={user? <CalendarView /> : <Navigate to="/auth" />} />
@@ -123,7 +123,7 @@ function App() {
               </AdminRoute>
             } />
               
-            <Route path="/" element={<Navigate to={user? "/agenda" : "/auth"} />} />
+            <Route path="/" element={<Navigate to={user? "/dashboard" : "/auth"} />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
