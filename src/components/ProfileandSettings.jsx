@@ -272,20 +272,10 @@ export default function Profile() {
   };
 
   const sendOtpToOldEmail = async () => {
-    const trimmedNew = newEmail.trim().toLowerCase();
-    const trimmedCurrent = user?.email?.trim().toLowerCase();
-
-    if (!trimmedNew || trimmedNew === trimmedCurrent) {
-      toast.error('Enter a new email');
-      return;
-    }
-
     setOtpLoading(true);
 
     try {
-      const res = await API.post('/auth/request-email-change', {
-        newEmail: trimmedNew
-      });
+      const res = await API.post('/auth/request-email-change');
 
       setEmailChangeStep(1);
 
@@ -294,7 +284,7 @@ export default function Profile() {
           duration: 8000
         });
       } else {
-        toast.success('OTP sent to current email');
+        toast.success('Verification code sent to current email');
       }
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Failed to send OTP');
@@ -304,11 +294,20 @@ export default function Profile() {
   };
 
   const verifyOldEmailAndSendNew = async () => {
+    const trimmedNew = newEmail.trim().toLowerCase();
+    const trimmedCurrent = user?.email?.trim().toLowerCase();
+
+    if (!trimmedNew || trimmedNew === trimmedCurrent) {
+      toast.error('Please enter a different new email');
+      return;
+    }
+
     setOtpLoading(true);
 
     try {
       const res = await API.post('/auth/verify-old-email', {
-        otp: oldEmailOtp
+        otp: oldEmailOtp,
+        newEmail: trimmedNew
       });
 
       setEmailChangeStep(2);
@@ -318,7 +317,7 @@ export default function Profile() {
           duration: 8000
         });
       } else {
-        toast.success('OTP sent to new email');
+        toast.success('Verification code sent to new email');
       }
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Verification failed');
@@ -540,16 +539,14 @@ export default function Profile() {
           >
             {emailChangeStep === 0 && (
               <>
-                <label htmlFor="newEmailInput">New Email</label>
+                <label>Current Email</label>
 
                 <div className="email-otp-row">
                   <input
-                    id="newEmailInput"
                     type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
+                    value={user.email}
                     className="email-input-flex"
-                    required
+                    disabled
                   />
 
                   <button
@@ -558,7 +555,7 @@ export default function Profile() {
                     className="btn-secondary"
                     disabled={otpLoading}
                   >
-                    {otpLoading ? 'Sending...' : 'Verify Current'}
+                    {otpLoading ? 'Sending...' : 'Verify Current Email'}
                   </button>
                 </div>
               </>
@@ -566,24 +563,42 @@ export default function Profile() {
 
             {emailChangeStep === 1 && (
               <>
-                <p>OTP sent to {user.email}</p>
+                <p style={{ marginBottom: '14px' }}>Verification code sent to {user.email}</p>
 
-                <div className="email-otp-row">
-                  <input
-                    type="text"
-                    value={oldEmailOtp}
-                    onChange={(e) => setOldEmailOtp(e.target.value)}
-                    className="email-input-flex"
-                    required
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label htmlFor="oldEmailOtpInput" style={{ display: 'block', marginBottom: '6px' }}>Verification Code (Current Email)</label>
+                    <input
+                      id="oldEmailOtpInput"
+                      type="text"
+                      placeholder="Enter Verification Code"
+                      value={oldEmailOtp}
+                      onChange={(e) => setOldEmailOtp(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '12px 16px', border: '1px solid rgba(28,25,23,0.1)', borderRadius: '12px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="newEmailInput" style={{ display: 'block', marginBottom: '6px' }}>New Email Address</label>
+                    <input
+                      id="newEmailInput"
+                      type="email"
+                      placeholder="Enter New Email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '12px 16px', border: '1px solid rgba(28,25,23,0.1)', borderRadius: '12px' }}
+                    />
+                  </div>
 
                   <button
-                    type="button"
-                    onClick={verifyOldEmailAndSendNew}
-                    className="btn-secondary"
+                    type="submit"
+                    className="btn-primary"
                     disabled={otpLoading}
+                    style={{ marginTop: '6px' }}
                   >
-                    {otpLoading ? 'Verifying...' : 'Verify'}
+                    {otpLoading ? 'Processing...' : 'Verify & Send OTP to New Email'}
                   </button>
                 </div>
               </>
