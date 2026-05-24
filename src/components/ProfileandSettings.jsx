@@ -272,7 +272,10 @@ export default function Profile() {
   };
 
   const sendOtpToOldEmail = async () => {
-    if (!newEmail || newEmail === user?.email) {
+    const trimmedNew = newEmail.trim().toLowerCase();
+    const trimmedCurrent = user?.email?.trim().toLowerCase();
+
+    if (!trimmedNew || trimmedNew === trimmedCurrent) {
       toast.error('Enter a new email');
       return;
     }
@@ -281,7 +284,7 @@ export default function Profile() {
 
     try {
       const res = await API.post('/auth/request-email-change', {
-        newEmail
+        newEmail: trimmedNew
       });
 
       setEmailChangeStep(1);
