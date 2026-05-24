@@ -175,7 +175,7 @@ export default function Dashboard() {
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">
-              {getGreeting()}, {user?.username || 'Student'}!
+              {getGreeting()}, {user?.username || user?.name || 'Student'}!
             </h1>
             <p className="dashboard-subtitle">
               {new Date().toLocaleDateString('en-US', {

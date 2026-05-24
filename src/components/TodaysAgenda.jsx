@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { scheduleApi } from '../api/scheduleApi';
@@ -41,6 +41,16 @@ export default function TodaysAgenda() {
   useEffect(() => {
     Promise.resolve().then(fetchToday);
   }, []);
+
+  // Keep the active timer block updated when the blocks list is re-fetched/updated
+  useEffect(() => {
+    if (activeTimerBlock) {
+      const updated = blocks.find(b => b._id === activeTimerBlock._id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(activeTimerBlock)) {
+        setActiveTimerBlock(updated);
+      }
+    }
+  }, [blocks, activeTimerBlock]);
 
   const isOverdue = (block) => {
     if (block.completed || block.missed || block.isBreak) return false;
