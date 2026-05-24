@@ -626,7 +626,8 @@ html.dark .block-status-pro {
 }
 
 .missed-btn-pro,
-.log-btn-pro {
+.log-btn-pro,
+.delete-btn-pro {
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
@@ -639,19 +640,22 @@ html.dark .block-status-pro {
   transition: all 0.2s;
 }
 
-.missed-btn-pro {
+.missed-btn-pro,
+.delete-btn-pro {
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
   border-color: rgba(239, 68, 68, 0.18);
 }
 
-html.dark .missed-btn-pro {
+html.dark .missed-btn-pro,
+html.dark .delete-btn-pro {
   color: #fca5a5;
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.25);
 }
 
-.missed-btn-pro:hover {
+.missed-btn-pro:hover,
+.delete-btn-pro:hover {
   background: rgba(239, 68, 68, 0.15);
   transform: translateY(-1px);
 }

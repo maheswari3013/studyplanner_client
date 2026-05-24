@@ -437,7 +437,7 @@ export default function Profile() {
             }}
             className="btn-secondary"
           >
-            {showPasswordForm ? 'Cancel' : 'Change Password'}
+            {showPasswordForm ? 'Cancel' : user.hasPassword ? 'Change Password' : 'Set Password'}
           </button>
 
           <button
@@ -457,21 +457,23 @@ export default function Profile() {
             onSubmit={handlePasswordChange}
             className="password-form"
           >
-            <label>
-              Current Password
+            {user.hasPassword && (
+              <label>
+                Current Password
 
-              <input
-                type="password"
-                value={passwordData.currentPassword}
-                onChange={(e) =>
-                  setPasswordData({
-                    ...passwordData,
-                    currentPassword: e.target.value
-                  })
-                }
-                required
-              />
-            </label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      currentPassword: e.target.value
+                    })
+                  }
+                  required
+                />
+              </label>
+            )}
 
             <label>
               New Password
@@ -510,14 +512,23 @@ export default function Profile() {
               className="btn-primary"
               disabled={loading}
             >
-              {loading ? 'Updating...' : 'Update Password'}
+              {loading ? 'Updating...' : user.hasPassword ? 'Update Password' : 'Set Password'}
             </button>
           </form>
         )}
 
         {showEmailForm && (
           <form
-            onSubmit={handleEmailChange}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (emailChangeStep === 0) {
+                sendOtpToOldEmail();
+              } else if (emailChangeStep === 1) {
+                verifyOldEmailAndSendNew();
+              } else if (emailChangeStep === 2) {
+                handleEmailChange(e);
+              }
+            }}
             className="password-form"
           >
             {emailChangeStep === 0 && (
@@ -555,14 +566,16 @@ export default function Profile() {
                     value={oldEmailOtp}
                     onChange={(e) => setOldEmailOtp(e.target.value)}
                     className="email-input-flex"
+                    required
                   />
 
                   <button
                     type="button"
                     onClick={verifyOldEmailAndSendNew}
                     className="btn-secondary"
+                    disabled={otpLoading}
                   >
-                    Verify
+                    {otpLoading ? 'Verifying...' : 'Verify'}
                   </button>
                 </div>
               </>

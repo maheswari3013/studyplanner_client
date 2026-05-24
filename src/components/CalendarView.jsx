@@ -140,6 +140,21 @@ export default function CalendarView() {
     }
   };
 
+  const handleDeleteBlock = async (blockId) => {
+    if (!window.confirm('Delete this missed study block?')) return;
+    setScheduleLoading(true);
+    try {
+      await API.delete(`/schedule/${blockId}`);
+      toast.success('Missed block deleted');
+      await fetchData();
+      setSelectedDay(null);
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to delete block');
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
   const logTime = async () => {
     if (!loggingBlock || !actualMinutes) return toast.error('Enter minutes');
     try {
@@ -496,6 +511,16 @@ export default function CalendarView() {
                             disabled={scheduleLoading || syncing}
                           >
                             <Clock size={14} /> {block.actualDuration ? 'Update' : 'Log'}
+                          </button>
+                        )}
+                        {block.missed && (
+                          <button
+                            onClick={() => handleDeleteBlock(block._id)}
+                            className="delete-btn-pro"
+                            title="Delete missed block"
+                            disabled={scheduleLoading || syncing}
+                          >
+                            <X size={14} /> Delete
                           </button>
                         )}
                       </div>
