@@ -428,7 +428,7 @@ export default function CalendarView() {
             <Download size={18} /> Export.ics
           </button>
           <button onClick={syncGoogle} className="btn-cal btn-cal-blue" disabled={syncing}>
-            <Link size={18} /> {syncing ? 'Syncing...' : googleConnected ? 'Sync to Google' : 'Connect'}
+            <Link size={18} /> {syncing ? 'Syncing...' : googleConnected ? 'Synced with Google' : 'Connect'}
           </button>
           <button onClick={() => setShowPdfModal(true)} className="btn-cal btn-cal-red">
             <FileText size={18} /> Custom PDF

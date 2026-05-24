@@ -480,14 +480,34 @@ html.dark .status-badge.completed {
 }
 
 .status-badge.missed {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-  border-color: rgba(239, 68, 68, 0.2);
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.missed-badge {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-top: 8px;
+  display: inline-block;
+  font-weight: 700;
+  border: 1px solid transparent;
 }
 
 html.dark .status-badge.missed {
-  color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.26);
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+html.dark .missed-badge {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .modal-backdrop {

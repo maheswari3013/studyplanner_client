@@ -327,8 +327,12 @@ html.dark .glass-card {
 
 /* Fix browser-default password reveal (eye icon) and clear buttons in dark mode */
 html.dark input::-ms-reveal,
-html.dark input::-ms-clear {
-  filter: invert(1);
+html.dark input::-ms-clear,
+html.dark input::-webkit-reveal,
+html.dark input::-webkit-clear,
+html.dark input::-webkit-contacts-auto-fill-button,
+html.dark input::-webkit-credentials-auto-fill-button {
+  filter: invert(1) !important;
 }
 
 /* Global dark mode placeholder contrast enhancement */
