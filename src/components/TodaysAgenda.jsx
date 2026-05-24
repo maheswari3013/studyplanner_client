@@ -9,6 +9,42 @@ import GlassCard from '../components/GlassCard';
 import StyledButton from '../components/StyledButton';
 import toast from 'react-hot-toast';
 import '../assets/TodaysAgenda.css';
+const filterDayBlocks = (blocks) => {
+  const result = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    const isBreak = block.isBreak || block.type === 'Break';
+    
+    if (!isBreak) {
+      result.push(block);
+    } else {
+      let prevStudy = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (!(blocks[j].isBreak || blocks[j].type === 'Break')) {
+          prevStudy = blocks[j];
+          break;
+        }
+      }
+      
+      let nextStudy = null;
+      for (let j = i + 1; j < blocks.length; j++) {
+        if (!(blocks[j].isBreak || blocks[j].type === 'Break')) {
+          nextStudy = blocks[j];
+          break;
+        }
+      }
+      
+      const isPrevValid = prevStudy && !(prevStudy.missed || prevStudy.status === 'missed');
+      const isNextValid = nextStudy && !(nextStudy.missed || nextStudy.status === 'missed');
+      const lastInResultIsBreak = result.length > 0 && (result[result.length - 1].isBreak || result[result.length - 1].type === 'Break');
+      
+      if (isPrevValid && isNextValid && !lastInResultIsBreak) {
+        result.push(block);
+      }
+    }
+  }
+  return result;
+};
 
 export default function TodaysAgenda() {
   const navigate = useNavigate();
@@ -231,15 +267,6 @@ export default function TodaysAgenda() {
           </StyledButton>
         </div>
 
-        {activeTimerBlock && (
-          <StudyTimer
-            block={activeTimerBlock}
-            onComplete={markComplete}
-            onNeedMoreTime={handleNeedMoreTime}
-            onClose={() => setActiveTimerBlock(null)}
-          />
-        )}
-
         {showDateModal && (
           <div className="modal-backdrop">
             <GlassCard className="modal">
@@ -292,14 +319,15 @@ export default function TodaysAgenda() {
         ) : (
           Object.keys(groupedBlocks).sort().map((date) => {
             const dayBlocks = groupedBlocks[date];
-            const lastBlock = dayBlocks[dayBlocks.length - 1];
+            const filteredBlocks = filterDayBlocks(dayBlocks);
+            const lastBlock = filteredBlocks[filteredBlocks.length - 1];
             const dayEndsWithBreak = lastBlock && (lastBlock.isBreak || lastBlock.type === 'Break');
             return (
               <div key={date} className="agenda-day-group">
                 <div className="agenda-day-header">
                   <h3>{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
                 </div>
-                {dayBlocks.map(block => (
+                {filteredBlocks.map(block => (
                   <AgendaBlock
                     key={block._id}
                     block={block}
@@ -312,6 +340,9 @@ export default function TodaysAgenda() {
                     onComplete={markComplete}
                     onMissed={markMissed}
                     onPending={markPending}
+                    isTimerActive={activeTimerBlock?._id === block._id}
+                    onNeedMoreTime={handleNeedMoreTime}
+                    onCloseTimer={() => setActiveTimerBlock(null)}
                   />
                 ))}
                 {dayEndsWithBreak && (

@@ -336,3 +336,23 @@ html.dark .timer-btn-more:hover {
     justify-content: center;
   }
 }
+
+/* Agenda Block Nested Timer Styling */
+.block-card .timer-container {
+  max-width: 100%;
+  margin-top: 20px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 20px 0 0;
+}
+
+.block-card .timer-container::before {
+  display: none;
+}
+
+.block-card .timer-close-btn {
+  top: 0px;
+  right: 0px;
+}

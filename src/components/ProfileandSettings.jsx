@@ -43,7 +43,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export default function Profile() {
-  const { user, logout, updateUser, fetchUser } = useContext(AuthContext);
+  const { user, logout, updateUser, fetchUser, setAuthData } = useContext(AuthContext);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
@@ -334,7 +334,11 @@ export default function Profile() {
         otp: newEmailOtp
       });
 
-      updateUser(res.data);
+      if (res.data.token) {
+        setAuthData(res.data.token, res.data.user);
+      } else {
+        updateUser(res.data);
+      }
 
       toast.success('Email updated');
 
@@ -532,11 +536,12 @@ export default function Profile() {
             className="password-form"
           >
             {emailChangeStep === 0 && (
-              <label>
-                New Email
+              <>
+                <label htmlFor="newEmailInput">New Email</label>
 
                 <div className="email-otp-row">
                   <input
+                    id="newEmailInput"
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
@@ -553,7 +558,7 @@ export default function Profile() {
                     {otpLoading ? 'Sending...' : 'Verify Current'}
                   </button>
                 </div>
-              </label>
+              </>
             )}
 
             {emailChangeStep === 1 && (

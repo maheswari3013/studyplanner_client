@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import { AlertTriangle, BookOpen, Check, ClockIcon, Coffee, Edit2, FileWarning, Maximize2, Play, X } from 'lucide-react';
+import StudyTimer from './StudyTimer';
 
 export default function AgendaBlock({
   block,
@@ -11,7 +12,10 @@ export default function AgendaBlock({
   onFocus,
   onComplete,
   onMissed,
-  onPending
+  onPending,
+  isTimerActive,
+  onNeedMoreTime,
+  onCloseTimer
 }) {
   const isBreak = block.isBreak || block.type === 'Break';
   const isCompleted = block.completed;
@@ -110,6 +114,15 @@ export default function AgendaBlock({
           </>
         )}
       </div>
+
+      {isTimerActive && (
+        <StudyTimer
+          block={block}
+          onComplete={onComplete}
+          onNeedMoreTime={onNeedMoreTime}
+          onClose={onCloseTimer}
+        />
+      )}
     </div>
   );
 }
